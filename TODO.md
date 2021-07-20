@@ -1,0 +1,2 @@
+ - [] Model update method
+ - [] Pydantic -> dataclass

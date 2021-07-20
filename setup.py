@@ -40,7 +40,7 @@ setup(
     python_requires='>=3.6',
     url="https://github.com/jockerz/redis_simple_orm",
     license="MIT",
-    description="Simple ORM (Sync and Async) with Redis.",
+    description="Simple Redis ORM (Sync and Async).",
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
     author="Jockerz",
