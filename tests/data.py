@@ -1,35 +1,30 @@
 USERS = [
 	{
-		'id': 1, 
+		'user_id': 1, 
 		'username': 'first_user', 
 		'email': 'first_user@contoh.com',
-		'name': 'First User',
 		'group_id': 1
 	},
 	{
-		'id': 2, 
+		'user_id': 2, 
 		'username': 'second_user', 
 		'email': 'second_user@contoh.com',
-		'name': 'Second User',
 		'group_id': 1
 	},
 	{
-		'id': 3, 
+		'user_id': 3, 
 		'username': 'third_user', 
 		'email': 'third_user@contoh.com',
-		'name': 'Third User',
 		'group_id': 1
 	},
 	{
-		'id': 4, 
-		'username': 'fourth_user', 
-		'name': 'Fourth User',
+		'user_id': 4, 
+		'username': 'fourth_user',
 		'group_id': 2
 	},
 	{
-		'id': 5, 
-		'username': 'fifth_user', 
-		'name': 'Fifth User',
+		'user_id': 5, 
+		'username': 'fifth_user',
 		'group_id': 2
 	},
 ]

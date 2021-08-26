@@ -6,8 +6,10 @@ REDIS_MODEL_PREFIX = 'simple_redis_orm'
 
 
 class BaseIndex:
+    # prefix for redis key
     __prefix__: str = REDIS_MODEL_PREFIX
     __index_name__: str = 'index_base'
+    # Model class that using this index
     __model__: 'BaseModel'
     __key__: str
 
@@ -21,9 +23,12 @@ class BaseIndex:
         return cls()
 
 
-class BaseModel(PydanticBaseModel):
+class BaseModel:
+    # prefix for redis key
     __prefix__: str = REDIS_MODEL_PREFIX
+    # infix for redis key and model name
     __model_name__: str
+    # Object property name that are to be redis key suffix
     __key__: str
     __indexes__: List[BaseIndex] = None
 

@@ -1,6 +1,7 @@
+from dataclasses import asdict
 from typing import Union
 
-from aioredis.commands import Redis, Pipeline
+from aioredis.client import Redis, Pipeline
 
 from RSO.base import BaseModel
 
@@ -12,6 +13,9 @@ class Model(BaseModel):
     async def is_exists(self, redis: Redis):
         return bool(await redis.exists(self.redis_key))
 
+    def dict(self):
+        return asdict(self)
+
     def to_redis(self):
         return self.dict()
 
@@ -21,9 +25,11 @@ class Model(BaseModel):
         else:
             pipe = redis.pipeline()
 
-        pipe.hmset_dict(self.redis_key, self.to_redis())
+        pipe.hmset(self.redis_key, self.to_redis())
         for index_class in self.__indexes__:
             index = index_class.create_from_model(self)
+            if getattr(self, index_class.__key__) is None:
+                continue
             await index.save_index(pipe)
         await pipe.execute()
 

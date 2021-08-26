@@ -1,46 +1,15 @@
-# Redis Simple ORM
+from dataclasses import dataclass, field
 
-Redis ORM in Simple Way.
-If this is too simple, please take a look on [walrus](https://walrus.readthedocs.org).
+import pytest
+from fakeredis import FakeRedis as Redis, aioredis
 
-> __NOTE__: Please be aware, that this module is way too simple. 
-> Do not use for your main data storage.
-> Better to use for cache or temporary alike storage with redis
-
-## Installation
-
-[Redis-Py](https://redis-py.readthedocs.io)
-
-```bash
-pip install redis_simple_orm[redis-py]
-```
-
-__OR__
-
-Async with [`aioredis`](https://aioredis.readthedocs.io)
-
-```bash
-pip install redis_simple_orm[aioredis]
-```
-
-
-## Usage Example
-
-I need to save user data to Redis as following `python dict`.
-
-From `tests/data.py` Save as `data.py`
-
-
-I need to save this data into Redis and make it searchable by its `id`, `username`, `email` and `group_id`.
-
-
-### Model
-
-`model.py`
-```python
-from redis import Redis
 from RSO.index import HashIndex, SetIndex
 from RSO.model import Model
+from RSO.aioredis.index import (
+	HashIndex as AsyncHashIndex, 
+	SetIndex as AsyncSetIndex
+)
+from RSO.aioredis.model import Model as AsyncModel
 
 from .data import USERS
 
@@ -106,32 +75,14 @@ class UserModel(Model):
     def search_group_member(cls, redis: Redis, group_id: int):
         return SetIndexGroupID.search_models(redis, group_id, cls)
 
-```
 
-### CRUD
+def test_main_sync(sync_redis):
+	redis = sync_redis
 
-`crud.py`
-```python
-from redis import Redis
-
-from data import USERS
-from model import UserModel
-
-
-redis = Redis(decode_responses=True)
-
-
-def create_user(redis, user_data: dict):
-	user = UserModel(**user_data)
-	user.save(redis)
-	return user
-
-
-def main():
 	# save all user
 	for user_data in USERS:
-		user = create_user(redis, user_data)
-		user.save()
+		user = UserModel(**user_data)
+		user.save(redis)
 
 	"""Now see how is the model and index data saved on redis :)"""
 
@@ -160,27 +111,7 @@ def main():
 	assert len(users) == 0
 
 
-main()
-```
-
-
-## Usage Example (`asyncio` version)
-
-### Model CRUD (Async)
-
-`model.py`
-```python
-from aioredis.commands import Redis
-from RSO.aioredis.index import (
-	HashIndex as AsyncHashIndex, 
-	SetIndex as AsyncSetIndex
-)
-from RSO.aioredis.model import Model as AsyncModel
-
-from .data import USERS
-
-
-REDIS_MODEL_PREFIX = 'MY_REDIS_MODEL'
+# Async
 
 
 class AsyncSingleIndexUsername(AsyncHashIndex):
@@ -240,28 +171,15 @@ class AsyncUserModel(AsyncModel):
     async def search_group_member(cls, redis: Redis, group_id: int):
         return await AsyncSetIndexGroupID.search_models(redis, group_id, cls)
 
-```
 
-### CRUD
+@pytest.mark.asyncio
+async def test_async_main(async_redis):
+	redis = async_redis
 
-`crud.py`
-```python
-import asyncio
-
-import aioredis
-from aioredis.commands import Redis
-
-from data import USERS
-from model import AsyncUserModel
-
-
-redis = aioredis.from_url('redis://localhost', decode_responses=True)
-
-
-async def main():
 	# save all user
 	for user_data in USERS:
-		user =  AsyncUserModel(**user_data)
+		user = AsyncUserModel(**user_data)
+		print(f'{user.redis_key}: {user.to_redis()}')
 		await user.save(redis)
 
 	"""Now see how is the model and index data saved on redis :)"""
@@ -289,7 +207,3 @@ async def main():
 	assert len(users) == 2
 	users = await AsyncUserModel.search_group_member(redis, 1_000_000)
 	assert len(users) == 0
-
-
-asyncio.run(main())
-```

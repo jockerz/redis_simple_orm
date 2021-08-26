@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, InitVar
 from datetime import date
 
 from RSO.index import HashIndex, SetIndex
@@ -31,10 +31,17 @@ class BaseIndexGroupID:
     __key__ = 'group_id'
 
 
+@dataclass
 class BaseUserModel:
     __prefix__ = REDIS_MODEL_PREFIX
     __model_name__ = 'user'
     __key__ = 'user_id'
+
+    user_id: int
+    username: str
+    email: str = field(default=None)
+    group_id: int = field(default=None)
+    birth_date: date = field(default=None)
 
 
 # Sync
@@ -52,13 +59,8 @@ class SetIndexGroupID(BaseIndexGroupID, SetIndex):
     pass
 
 
+@dataclass
 class UserModel(Model, BaseUserModel):
-
-    user_id: int
-    username: str
-    email: str = None
-    group_id: int
-    birth_date: date = None
 
     __indexes__ = [
         SingleIndexUsername,
@@ -70,6 +72,8 @@ class UserModel(Model, BaseUserModel):
         dict_data = self.dict()
         if self.birth_date is not None:
             dict_data['birth_date'] = self.birth_date.isoformat()
+        if self.email is None:
+            del dict_data['email']
         return dict_data
 
 
@@ -88,13 +92,9 @@ class AsyncSetIndexGroupID(BaseIndexGroupID, AsyncSetIndex):
     pass
 
 
+@dataclass
 class AsyncUserModel(BaseUserModel, AsyncModel):
 
-    user_id: int
-    username: str
-    email: str = None
-    group_id: int
-    birth_date: date = None
     __indexes__ = [
         AsyncSingleIndexUsername,
         AsyncSingleIndexEmail,

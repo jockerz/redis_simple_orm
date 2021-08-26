@@ -15,9 +15,7 @@ class HashIndex(BaseIndex):
 
     def save_index(self, redis: Union[Pipeline, Redis]):
         index_value = getattr(self.__model__, self.__key__)
-        redis.hmset(self.redis_key, {
-            index_value: self._model_key_value    
-        })
+        redis.hmset(self.redis_key, {index_value: self._model_key_value})
 
     @classmethod
     def search_model(cls, redis: Redis, index_value, model_class: BaseModel):
@@ -26,6 +24,8 @@ class HashIndex(BaseIndex):
             return
 
         model_primary_value = redis.hmget(index.redis_key, index_value)
+        if isinstance(model_primary_value, list):
+            model_primary_value = model_primary_value[0]
         return model_class.search(redis, model_primary_value)
 
     def remove_from_index(self, redis: Union[Pipeline, Redis]):
@@ -62,13 +62,9 @@ class SetIndex(BaseIndex):
         redis_key = cls._to_redis_key(index_value)
         if not redis.exists(redis_key):
             return []
-
-        index_values = redis.smembers(index)
-        if not index_values:
-            return []
-
+            
         model_instances = []
-        for value in index_values:
+        for value in redis.smembers(redis_key):
             model_instance = model_class.search(redis, value)
             model_instances.append(model_instance)
         return model_instances

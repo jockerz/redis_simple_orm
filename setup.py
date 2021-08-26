@@ -52,7 +52,6 @@ setup(
     data_files=[("", ["LICENSE"])],
     install_requires=[
         'aiocontextvars;python_version<"3.7"',
-        'pydantic'
     ],
     extras_require={
         "redis-py": ["redis"],

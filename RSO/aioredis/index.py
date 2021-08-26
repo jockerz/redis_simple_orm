@@ -1,4 +1,4 @@
-from aioredis.commands import Pipeline, Redis
+from aioredis.client import Pipeline, Redis
 
 from RSO.base import BaseIndex, BaseModel
 
@@ -13,7 +13,7 @@ class HashIndex(BaseIndex):
 
     async def save_index(self, redis: Pipeline):
         index_value = getattr(self.__model__, self.__key__)
-        redis.hmset_dict(self.redis_key, {
+        redis.hmset(self.redis_key, {
             index_value: self._model_key_value
         })
 
@@ -26,6 +26,8 @@ class HashIndex(BaseIndex):
             return
 
         model_primary_value = await redis.hmget(index.redis_key, index_value)
+        if model_primary_value and isinstance(model_primary_value, list):
+            model_primary_value = model_primary_value[0]
         return await model_class.search(redis, model_primary_value)
 
     async def remove_from_index(self, redis: Pipeline):
@@ -60,15 +62,11 @@ class SetIndex(BaseIndex):
     async def search_models(cls, redis: Redis, index_value, model_class: BaseModel):
         index = cls.create_from_model(model_class)
         redis_key = cls._to_redis_key(index_value)
-        if await redis.exists(redis_key):
-            return []
-
-        index_values = await redis.smembers(index)
-        if not index_values:
+        if not bool (await redis.exists(redis_key)):
             return []
 
         model_instances = []
-        for value in index_values:
+        for value in (await redis.smembers(redis_key)):
             model_instance = await model_class.search(redis, value)
             model_instances.append(model_instance)
         return model_instances
