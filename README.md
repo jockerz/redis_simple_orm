@@ -38,6 +38,8 @@ I need to save this data into Redis and make it searchable by its `id`, `usernam
 
 `model.py`
 ```python
+from dataclasses import dataclass, field
+
 from redis import Redis
 from RSO.index import HashIndex, SetIndex
 from RSO.model import Model
@@ -170,6 +172,8 @@ main()
 
 `model.py`
 ```python
+from dataclasses import dataclass, field
+
 from aioredis.commands import Redis
 from RSO.aioredis.index import (
 	HashIndex as AsyncHashIndex, 
