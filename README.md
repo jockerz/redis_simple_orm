@@ -1,15 +1,16 @@
 # Redis Simple ORM
 
 Redis ORM in Simple Way.
-If this is too simple, please take a look on [walrus](https://walrus.readthedocs.org).
+If you find this module is too simple, please take a look on [walrus](https://walrus.readthedocs.org).
 
 > __NOTE__: Please be aware, that this module is way too simple. 
 > Do not use for your main data storage.
 > Better to use for cache or temporary alike storage with redis
 
+
 ## Installation
 
-[Redis-Py](https://redis-py.readthedocs.io)
+Using [Redis-Py](https://redis-py.readthedocs.io)
 
 ```bash
 pip install redis_simple_orm[redis-py]
@@ -24,15 +25,17 @@ pip install redis_simple_orm[aioredis]
 ```
 
 
+## Usage Example Intro
+
+We are going to save data of users which listed on `tests/data.py`.
+Please go take a look.
+Copy `tests/data.py` to current directory.
+
+Then we are going to make the __Model__ and save it to `redis`.
+We also make the redis data is searchable by `id`, `username`, `email` and `group_id`.
+
+
 ## Usage Example
-
-I need to save user data to Redis as following `python dict`.
-
-From `tests/data.py` Save as `data.py`
-
-
-I need to save this data into Redis and make it searchable by its `id`, `username`, `email` and `group_id`.
-
 
 ### Model
 
@@ -166,7 +169,7 @@ main()
 ```
 
 
-## Usage Example (`asyncio` version)
+## Usage Example (`asynchronous` version)
 
 ### Model CRUD (Async)
 
