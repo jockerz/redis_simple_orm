@@ -29,7 +29,7 @@ class BaseModel:
     __model_name__: str
     # Object property name that are to be redis key suffix
     __key__: str
-    __indexes__: List[BaseIndex] = None
+    __indexes__: List[BaseIndex] = []
 
     @classmethod
     def _to_redis_key(cls, value):
