@@ -1,6 +1,5 @@
 from typing import List
 
-from pydantic import BaseModel as PydanticBaseModel
 
 REDIS_MODEL_PREFIX = 'simple_redis_orm'
 

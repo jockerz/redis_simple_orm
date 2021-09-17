@@ -18,7 +18,7 @@ class HashIndex(BaseIndex):
         redis.hmset(self.redis_key, {index_value: self._model_key_value})
 
     @classmethod
-    def search_model(cls, redis: Redis, index_value, model_class: BaseModel):
+    def search_model(cls, redis: Redis, index_value, model_class: type):
         index = cls.create_from_model(model_class)
         if not redis.exists(index.redis_key):
             return
@@ -57,12 +57,12 @@ class SetIndex(BaseIndex):
         return redis.smembers(redis_key)
 
     @classmethod
-    def search_models(cls, redis: Redis, index_value, model_class: BaseModel):
+    def search_models(cls, redis: Redis, index_value, model_class: type):
         index = cls.create_from_model(model_class)
         redis_key = cls._to_redis_key(index_value)
         if not redis.exists(redis_key):
             return []
-            
+
         model_instances = []
         for value in redis.smembers(redis_key):
             model_instance = model_class.search(redis, value)
