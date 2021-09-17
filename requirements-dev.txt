@@ -1,3 +1,6 @@
 fakeredis
 pytest
 pytest-asyncio
+
+# build module
+twine
