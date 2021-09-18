@@ -1,6 +1,13 @@
-from aioredis.client import Pipeline, Redis
+from aioredis import __version__ as ar_version
+try:
+    from aioredis.client import Redis, Pipeline
+except ModuleNotFoundError:
+    from aioredis.commands import Redis, Pipeline
 
 from RSO.base import BaseIndex, BaseModel
+
+
+old_aioredis = ar_version < '2.0.0'
 
 
 class HashIndex(BaseIndex):
@@ -13,9 +20,14 @@ class HashIndex(BaseIndex):
 
     async def save_index(self, redis: Pipeline):
         index_value = getattr(self.__model__, self.__key__)
-        redis.hmset(self.redis_key, {
-            index_value: self._model_key_value
-        })
+        if old_aioredis:
+            redis.hmset_dict(self.redis_key, {
+                index_value: self._model_key_value
+            })
+        else:
+            redis.hmset(self.redis_key, {
+                index_value: self._model_key_value
+            })
 
     @classmethod
     async def search_model(

@@ -1,9 +1,16 @@
 from dataclasses import asdict
 from typing import Union
 
-from aioredis.client import Redis, Pipeline
+from aioredis import __version__ as ar_version
+try:
+    from aioredis.client import Redis, Pipeline
+except ModuleNotFoundError:
+    from aioredis.commands import Redis, Pipeline
 
 from RSO.base import BaseModel
+
+
+old_aioredis = ar_version < '2.0.0'
 
 
 class Model(BaseModel):
@@ -25,7 +32,11 @@ class Model(BaseModel):
         else:
             pipe = redis.pipeline()
 
-        pipe.hmset(self.redis_key, self.to_redis())
+        if old_aioredis:
+            pipe.hmset_dict(self.redis_key, self.to_redis())
+        else:
+            pipe.hmset(self.redis_key, self.to_redis())
+
         for index_class in self.__indexes__:
             index = index_class.create_from_model(self)
             if getattr(self, index_class.__key__) is None:
@@ -38,6 +49,7 @@ class Model(BaseModel):
         redis_key = cls._to_redis_key(value)
         if bool(await redis.exists(redis_key)) is True:
             redis_data = await redis.hgetall(redis_key)
+            print(redis_data)
             return cls(**redis_data)
         else:
             return None

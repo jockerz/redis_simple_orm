@@ -110,6 +110,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+venv_aioredis_1/
 
 # Spyder project settings
 .spyderproject
