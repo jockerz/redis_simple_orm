@@ -1,6 +1,6 @@
 from datetime import date
 
-from .models import (
+from .models.redispy import (
     UserModel, 
     SingleIndexUsername, 
     SingleIndexEmail,
@@ -17,7 +17,7 @@ class TestModelCreate:
             group_id=10,
             birth_date=date.fromisoformat('1999-09-09')
         )
-        assert bool(user.is_exists(sync_redis)) is False
+        assert user.is_exists(sync_redis) is False
 
         user.save(sync_redis)
         assert user.is_exists(sync_redis) is True
@@ -26,13 +26,8 @@ class TestModelCreate:
         assert bool(sync_redis.exists(index_username.redis_key)) \
                is True
 
-        print(dir(user))
-        print(user.email)
-        print('dict:', user.dict())
-        print('keys:', sync_redis.keys('*'))
         index_email = SingleIndexEmail.create_from_model(user)
-        print('index_email.redis_key:', index_email.redis_key)
-        assert bool(sync_redis.exists(index_email.redis_key))
+        assert bool(sync_redis.exists(index_email.redis_key)) is True
 
         index_group_id = SetIndexGroupID.create_from_model(user)
         redis_key = index_group_id._to_redis_key(user.group_id)

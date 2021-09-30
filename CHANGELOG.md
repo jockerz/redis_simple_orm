@@ -1,9 +1,14 @@
 # Changelog
 
+## 1.2.0
+
+ - [x] Add new mode using [`txredisapi`][txredisapi]: `pip install redis_simple_orm[txredisapi]`
+ - Solve some minor bugs
+
 
 ## 1.1.0
 
- - Can use `aioredis` `2.x` or `>=1.3.x`
+ - Works `aioredis` `2.x` and `>=1.3.x`
 
 
 ## 1.0.1
@@ -13,9 +18,14 @@
 
 ## 1.0.0
 
- - Change [Pydantic](https://pydantic-docs.helpmanual.io/) to [Dataclasess](https://docs.python.org/3/library/dataclasses.html)
+ - Move from [Pydantic][Pydantic] to [Dataclass][Dataclass] to reduce dependencies
 
 
 ## 0.x.x
 
  - Initial release
+
+
+[Pydantic]: https://pydantic-docs.helpmanual.io/ 
+[Dataclass]: https://docs.python.org/3/library/dataclasses.html
+[txredisapi]: https://github.com/IlyaSkriblovsky/txredisapi

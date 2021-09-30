@@ -106,9 +106,10 @@ celerybeat.pid
 .env
 .venv
 env/
-venv/
-ENV/
 env.bak/
+ENV/
+_trial_temp/
+venv/
 venv.bak/
 venv_aioredis_1/
 

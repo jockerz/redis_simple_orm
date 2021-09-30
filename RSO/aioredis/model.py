@@ -1,7 +1,7 @@
 from dataclasses import asdict
 from typing import Union
 
-from aioredis import __version__ as ar_version
+from aioredis import __version__ as aioredis_version
 try:
     from aioredis.client import Redis, Pipeline
 except ModuleNotFoundError:
@@ -10,13 +10,10 @@ except ModuleNotFoundError:
 from RSO.base import BaseModel
 
 
-old_aioredis = ar_version < '2.0.0'
+old_aioredis = aioredis_version < '2.0.0'
 
 
 class Model(BaseModel):
-    class Config:
-        orm_mode = True
-
     async def is_exists(self, redis: Redis):
         return bool(await redis.exists(self.redis_key))
 
@@ -24,7 +21,11 @@ class Model(BaseModel):
         return asdict(self)
 
     def to_redis(self):
-        return self.dict()
+        dict_data = self.dict()
+        for key, value in dict_data.copy().items():
+            if value is None:
+                del dict_data[key]
+        return dict_data
 
     async def save(self, redis: Union[Pipeline, Redis]):
         if isinstance(redis, Pipeline):
@@ -39,7 +40,7 @@ class Model(BaseModel):
 
         for index_class in self.__indexes__:
             index = index_class.create_from_model(self)
-            if getattr(self, index_class.__key__) is None:
+            if getattr(self, index_class.__key__, None) is None:
                 continue
             await index.save_index(pipe)
         await pipe.execute()
@@ -62,6 +63,8 @@ class Model(BaseModel):
 
         for index_class in self.__indexes__:
             index = index_class.create_from_model(self)
+            if index is None:
+                continue
             await index.remove_from_index(pipe)
 
         pipe.delete(self.redis_key)

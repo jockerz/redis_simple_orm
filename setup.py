@@ -56,6 +56,7 @@ setup(
     extras_require={
         "redis-py": ["redis"],
         "aioredis": ["aioredis"],
+        "txredisapi": ["txredisapi"],
     },
     classifiers=[
         "Development Status :: 3 - Alpha",

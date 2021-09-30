@@ -58,7 +58,6 @@ class SetIndex(BaseIndex):
 
     @classmethod
     def search_models(cls, redis: Redis, index_value, model_class: type):
-        index = cls.create_from_model(model_class)
         redis_key = cls._to_redis_key(index_value)
         if not redis.exists(redis_key):
             return []

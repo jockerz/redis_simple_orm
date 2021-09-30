@@ -24,6 +24,14 @@ Async with [`aioredis`](https://aioredis.readthedocs.io)
 pip install redis_simple_orm[aioredis]
 ```
 
+__OR__
+
+Using [`txredisapi`](https://github.com/IlyaSkriblovsky/txredisapi)
+
+```bash
+pip install redis_simple_orm[txredisapi]
+```
+
 
 ## Usage Example Intro
 
@@ -169,9 +177,9 @@ main()
 ```
 
 
-## Usage Example (`asynchronous` version)
+## Usage Example (`asyncio` version)
 
-### Model CRUD (Async)
+### Model
 
 `model.py`
 ```python
@@ -300,3 +308,17 @@ async def main():
 
 asyncio.run(main())
 ```
+
+## Usage Example (`twisted` version)
+
+TODO
+
+
+### Model
+
+TODO
+
+
+### CRUD
+
+TODO

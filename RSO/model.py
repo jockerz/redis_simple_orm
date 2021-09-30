@@ -14,7 +14,11 @@ class Model(BaseModel):
         return asdict(self)
 
     def to_redis(self):
-        return self.dict()
+        dict_data = self.dict()
+        for key, value in dict_data.copy().items():
+            if value is None:
+                del dict_data[key]
+        return dict_data
 
     def save(self, redis: Union[Pipeline, Redis]):
         if isinstance(redis, Pipeline):
@@ -35,6 +39,7 @@ class Model(BaseModel):
         redis_key = cls._to_redis_key(value)
         if bool(redis.exists(redis_key)):
             redis_data = redis.hgetall(redis_key)
+            print(f' - {redis_key}: {redis_data}')
             return cls(**redis_data)
         else:
             return None

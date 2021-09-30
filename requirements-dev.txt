@@ -1,6 +1,7 @@
 fakeredis
 pytest
 pytest-asyncio
+pytest-twisted
 
 # build module
 twine

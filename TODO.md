@@ -1,3 +1,4 @@
- - [] Model update method
+ - [ ] Model update method
  - [x] Pydantic -> dataclass
- - [] Solve `fakeredis.aioredis` has no `connection` attribute
+ - [x] Solve `fakeredis.aioredis` has no `connection` attribute
+ - [ ] Update test

@@ -2,18 +2,18 @@ from datetime import date
 
 import pytest
 
-from .models import (
-    AsyncUserModel,
-    AsyncSingleIndexUsername,
-    AsyncSingleIndexEmail,
-    AsyncSetIndexGroupID
+from .models.aioredis import (
+    UserModel,
+    SingleIndexUsername,
+    SingleIndexEmail,
+    SetIndexGroupID
 )
 
 
 @pytest.mark.asyncio
 class TestModelCreate:
     async def test_success(self, async_redis):
-        user = AsyncUserModel(
+        user = UserModel(
             user_id=1,
             username='test_create_success',
             email='test@create.success',
@@ -25,13 +25,13 @@ class TestModelCreate:
         await user.save(async_redis)
         assert await user.is_exists(async_redis) is True
 
-        index_username = AsyncSingleIndexUsername.create_from_model(user)
+        index_username = SingleIndexUsername.create_from_model(user)
         assert await async_redis.exists(index_username.redis_key)
 
-        index_email = AsyncSingleIndexEmail.create_from_model(user)
+        index_email = SingleIndexEmail.create_from_model(user)
         assert await async_redis.exists(index_email.redis_key)
 
-        index_group_id = AsyncSetIndexGroupID.create_from_model(user)
+        index_group_id = SetIndexGroupID.create_from_model(user)
         redis_key = index_group_id._to_redis_key(user.group_id)
         assert await async_redis.exists(redis_key)
 
@@ -39,7 +39,7 @@ class TestModelCreate:
 @pytest.mark.asyncio
 class TestModelGet:
     async def test_success(self, async_redis):
-        user = AsyncUserModel(
+        user = UserModel(
             user_id=1,
             username='test_create_success',
             email='test@create.success',
@@ -49,17 +49,17 @@ class TestModelGet:
         await user.save(async_redis)
         assert await user.is_exists(async_redis) is True
 
-        assert await AsyncUserModel.search(async_redis, user.user_id) \
+        assert await UserModel.search(async_redis, user.user_id) \
                is not None
 
     async def test_not_found(self, async_redis):
-        assert await AsyncUserModel.search(async_redis, 1) is None
+        assert await UserModel.search(async_redis, 1) is None
 
 
 @pytest.mark.asyncio
 class TestModelDelete:
     async def test_success(self, async_redis):
-        user = AsyncUserModel(
+        user = UserModel(
             user_id=1,
             username='test_create_success',
             email='test@create.success',
