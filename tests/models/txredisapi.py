@@ -8,11 +8,11 @@ from RSO.txredisapi.index import HashIndex, ListIndex, SetIndex
 from RSO.txredisapi.model import Model
 
 from .base import (
-    BaseIndexGroupID,
     BaseIndexEmail,
+    BaseIndexGroupID,
+    BaseIndexQueue,
     BaseIndexUsername,
     BaseUserModel,
-    BaseIndexQueue
 )
 
 

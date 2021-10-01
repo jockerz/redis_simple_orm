@@ -1,4 +1,5 @@
 from dataclasses import asdict
+from datetime import date, datetime
 from typing import Union
 
 from aioredis import __version__ as aioredis_version
@@ -8,6 +9,7 @@ except ModuleNotFoundError:
     from aioredis.commands import Redis, Pipeline
 
 from RSO.base import BaseModel
+from .index import ListIndex
 
 
 old_aioredis = aioredis_version < '2.0.0'
@@ -25,6 +27,8 @@ class Model(BaseModel):
         for key, value in dict_data.copy().items():
             if value is None:
                 del dict_data[key]
+            elif isinstance(value, (date, datetime)):
+                dict_data[key] = value.isoformat()
         return dict_data
 
     async def save(self, redis: Union[Pipeline, Redis]):
@@ -45,6 +49,49 @@ class Model(BaseModel):
             await index.save_index(pipe)
         await pipe.execute()
 
+    async def extended_save(self, redis: Union[Pipeline, Redis]):
+        """
+        Extender of `save` method to avoid saving our key value
+        to be saved multiple times on ListIndex
+        """
+        list_index_map = {}
+        for index_class in self.__indexes__ or []:
+            if not issubclass(index_class, ListIndex):
+                continue
+            index = index_class.create_from_model(self)
+            model_key_value = getattr(self, self.__key__, None)
+            if model_key_value is None:
+                exist_on_index = False
+            else:
+                exist_on_index = await index.is_exist_on_list(
+                    redis, model_key_value
+                )
+            list_index_map[index] = exist_on_index
+
+        if isinstance(redis, Pipeline):
+            pipe = redis
+        else:
+            pipe = redis.pipeline()
+
+        if old_aioredis:
+            pipe.hmset_dict(self.redis_key, self.to_redis())
+        else:
+            pipe.hmset(self.redis_key, self.to_redis())
+
+        for index_class in self.__indexes__:
+            index = index_class.create_from_model(self)
+            if getattr(self, index_class.__key__, None) is None:
+                continue
+            await index.save_index(pipe)
+
+        # remove duplicate on index queue list
+        for index, exist_on_index in list_index_map.items():
+            if exist_on_index is True:
+                model_key_value = getattr(self, self.__key__)
+                await index.remove_from_list(pipe, model_key_value)
+
+        await pipe.execute()
+
     @classmethod
     async def search(cls, redis: Redis, value):
         redis_key = cls._to_redis_key(value)
@@ -62,12 +109,10 @@ class Model(BaseModel):
             pipe = redis.pipeline()
 
         for index_class in self.__indexes__:
-            index = index_class.create_from_model(self)
-            if index is None:
+            if getattr(self, index_class.__key__) is None:
                 continue
+            index = index_class.create_from_model(self)
             await index.remove_from_index(pipe)
 
         pipe.delete(self.redis_key)
         await pipe.execute()
-
-        del self

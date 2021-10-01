@@ -25,7 +25,9 @@ class HashIndex(BaseIndex):
 
     @classmethod
     @inlineCallbacks
-    def search_model(cls, redis: ConnectionHandler, index_value, model_class: type):
+    def search_model(
+        cls, redis: ConnectionHandler, index_value, model_class: type
+    ):
         index = cls.create_from_model(model_class)
         is_exist = yield redis.exists(index.redis_key)
         if not is_exist:
@@ -71,6 +73,7 @@ class ListIndex(BaseIndex):
         result = yield redis.lrange(redis_key, 0, -1)
         return returnValue(result)
 
+    # TODO: use classmethod
     @inlineCallbacks
     def is_exist_on_list(self, redis: ConnectionHandler, model_value):
         result = yield redis.execute_command(
@@ -84,10 +87,8 @@ class ListIndex(BaseIndex):
         model_value
     ):
         if isinstance(redis, ConnectionHandler):
-            print('HERE')
             yield redis.lrem(self.redis_key, 1, model_value)
         else:
-            print('HERE2')
             redis.lrem(self.redis_key, 1, model_value)
 
     @classmethod

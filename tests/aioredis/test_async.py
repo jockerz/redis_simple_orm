@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from .models.aioredis import (
+from ..models.aioredis import (
     UserModel,
     SingleIndexUsername,
     SingleIndexEmail,

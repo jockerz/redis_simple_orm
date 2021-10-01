@@ -60,7 +60,7 @@ class Model(BaseModel):
             index = index_class.create_from_model(self)
             yield index.save_index(pipe)
 
-        # avoid duplicate on index queue list
+        # remove duplicate on index queue list
         for index, exist_on_index in list_index_map.items():
             if exist_on_index is True:
                 model_key_value = getattr(self, self.__key__)
@@ -84,7 +84,7 @@ class Model(BaseModel):
 
     def to_redis(self):
         dict_data = self.dict()
-        for key, value in dict_data.copy().items():
+        for key, value in self.dict().items():
             if value is None:
                 del dict_data[key]
         return dict_data

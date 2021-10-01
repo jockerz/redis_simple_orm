@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1
+
+ - Use `BaseModel.__post_init__` convert string certain types, 
+   such as `bool`, `date`, `datetime`, etc.
+
+
 ## 1.2.0
 
  - [x] Add new mode using [`txredisapi`][txredisapi]: `pip install redis_simple_orm[txredisapi]`
