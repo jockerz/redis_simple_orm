@@ -1,16 +1,19 @@
-from typing import Any, Union
+from typing import Any, TypeVar, Union
 
-from aioredis import __version__ as ar_version
+from aioredis import __version__ as aioredis_version
 try:
     from aioredis.client import Redis, Pipeline
+    from aioredis.exceptions import ResponseError
 except ModuleNotFoundError:
     from aioredis.commands import Redis, Pipeline
-from aioredis.exceptions import ResponseError
+    from aioredis.errors import ReplyError as ResponseError
 
 from RSO.base import BaseIndex, BaseModel
 
 
-old_aioredis = ar_version < '2.0.0'
+old_aioredis = aioredis_version < '2.0.0'
+
+T = TypeVar('T')
 
 
 class HashIndex(BaseIndex):
@@ -28,7 +31,7 @@ class HashIndex(BaseIndex):
                 index_value: self._model_key_value
             })
         else:
-            redis.hmset(self.redis_key, {
+            redis.hset(self.redis_key, mapping={
                 index_value: self._model_key_value
             })
 
@@ -73,22 +76,28 @@ class ListIndex(BaseIndex):
         redis_key = cls._to_redis_key(index_value)
         return await redis.lrange(redis_key, 0, -1)
 
-    # TODO: use classmethod
     async def is_exist_on_list(self, redis: Redis, model_value: Any):
         try:
-            result = await redis.lpos(self.redis_key, model_value)
+            if hasattr(redis, 'lpos'):
+                result = await redis.lpos(self.redis_key, model_value)
+            else:
+                result = await redis.execute('LPOS', self.redis_key, model_value)
             return result is not None
-        except ResponseError:
+        except (AttributeError, ResponseError):
             items = await redis.lrange(self.redis_key, 0, -1)
             return model_value in items or str(model_value) in items
 
     async def remove_from_list(
-        self, redis: Union[Pipeline, Redis], model_value
+        self, redis: Union[Pipeline, Redis], model_value: T,
+        count: int = 1
     ):
+        """
+        count = 0 to delete all
+        """
         if isinstance(redis, Pipeline):
-            redis.lrem(self.redis_key, 1, model_value)
+            redis.lrem(self.redis_key, count, model_value)
         else:
-            await redis.lrem(self.redis_key, 1, model_value)
+            await redis.lrem(self.redis_key, count, model_value)
 
     @classmethod
     async def search_models(cls, redis: Redis, index_value, model_class: type):
@@ -102,8 +111,11 @@ class ListIndex(BaseIndex):
             model_instances.append(model_instance)
         return model_instances
 
-    async def remove_from_index(self, redis: Pipeline):
-        redis.lrem(self.redis_key, 1, self._model_key_value)
+    async def remove_from_index(self, redis: Pipeline, count: int = 1):
+        """
+        count = 0 to remove all
+        """
+        redis.lrem(self.redis_key, count, self._model_key_value)
 
     @classmethod
     async def get_by_rpoplpush(cls, redis, index_value, model_class: type):
@@ -141,7 +153,7 @@ class SetIndex(BaseIndex):
     async def search_models(cls, redis: Redis, index_value, model_class: BaseModel):
         index = cls.create_from_model(model_class)
         redis_key = cls._to_redis_key(index_value)
-        if not bool (await redis.exists(redis_key)):
+        if not bool(await redis.exists(redis_key)):
             return []
 
         model_instances = []

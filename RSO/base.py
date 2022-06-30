@@ -1,5 +1,8 @@
 from datetime import date, datetime
-from typing import List
+from typing import List, TypeVar
+
+
+T = TypeVar('T')
 
 
 REDIS_MODEL_PREFIX = 'simple_redis_orm'
@@ -10,7 +13,7 @@ class BaseIndex:
     __prefix__: str = REDIS_MODEL_PREFIX
     __index_name__: str = 'index_base'
     # Model class that using this index
-    __model__: 'BaseModel'
+    __model__: T
     __key__: str
 
     @property
@@ -40,7 +43,11 @@ class BaseModel:
 
             f_type = desc.type
             if f_type == bool and not isinstance(f_value, bool):
-                value = bool(f_value)
+                # bool saved as 'True' / 'False' by txredisapi
+                if f_value in ['False', '0']:
+                    value = False
+                else:
+                    value = bool(f_value)
             elif f_type == date and not isinstance(f_value, date):
                 value = date.fromisoformat(f_value)
             elif f_type == datetime and not isinstance(f_value, datetime):

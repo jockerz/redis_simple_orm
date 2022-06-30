@@ -111,19 +111,19 @@ class TestListIndex:
         old_list_data = yield tx_redis.lrange(index.redis_key, 0, -1)
         assert len(old_list_data) == 2
 
+        redis_key = index.redis_key
         user = yield ExtendedUserModel.search_by_list_rpushlpop(
             tx_redis, queue_id=3
         )
-
         assert isinstance(user, ExtendedUserModel)
-        new_list_data = yield tx_redis.lrange(index.redis_key, 0, -1)
-        assert len(new_list_data) == 2
 
+        new_list_data = yield tx_redis.lrange(redis_key, 0, -1)
+        assert len(new_list_data) == 2
         assert new_list_data[0] == old_list_data[1]
         assert new_list_data[1] == old_list_data[0]
 
     @pytest_twisted.inlineCallbacks
-    def test_model_delete(self, tx_redis):
+    def test_after_delete(self, tx_redis):
         user = ExtendedUserModel(
             user_id=1, username='username', queue_id=3,
         )
@@ -180,7 +180,7 @@ class TestHashIndex:
         assert res is None
 
     @pytest_twisted.inlineCallbacks
-    def search_mode_delete(self, tx_redis):
+    def search_after_delete(self, tx_redis):
         user = UserModel(
             user_id=1,
             username='username',

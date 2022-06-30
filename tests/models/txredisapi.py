@@ -54,6 +54,7 @@ class UserModel(BaseUserModel, Model):
     def search_by_list_rpushlpop(
         cls, redis: ConnectionHandler, queue_id: int
     ):
+        """Search for model and do `rpushlpop` on the index"""
         res = yield ListIndexQueue.get_by_rpoplpush(redis, queue_id, cls)
         return res
 

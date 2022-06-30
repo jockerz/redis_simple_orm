@@ -1,9 +1,11 @@
-from typing import Union
+from typing import Any, Union, TypeVar
 
 from txredisapi import BaseRedisProtocol, ConnectionHandler
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from RSO.base import BaseIndex
+from RSO.base import BaseIndex, BaseModel
+
+T = TypeVar('T')
 
 
 class HashIndex(BaseIndex):
@@ -26,7 +28,7 @@ class HashIndex(BaseIndex):
     @classmethod
     @inlineCallbacks
     def search_model(
-        cls, redis: ConnectionHandler, index_value, model_class: type
+        cls, redis: ConnectionHandler, index_value, model_class: T
     ):
         index = cls.create_from_model(model_class)
         is_exist = yield redis.exists(index.redis_key)
@@ -68,14 +70,15 @@ class ListIndex(BaseIndex):
 
     @classmethod
     @inlineCallbacks
-    def get_members(cls, redis: ConnectionHandler, index_value):
+    def get_members(cls, redis: ConnectionHandler, index_value: Any):
         redis_key = cls._to_redis_key(index_value)
         result = yield redis.lrange(redis_key, 0, -1)
         return returnValue(result)
 
-    # TODO: use classmethod
     @inlineCallbacks
-    def is_exist_on_list(self, redis: ConnectionHandler, model_value):
+    def is_exist_on_list(
+        self, redis: ConnectionHandler, model_value: BaseModel
+    ):
         result = yield redis.execute_command(
             "LPOS", self.redis_key, model_value
         )
@@ -84,16 +87,21 @@ class ListIndex(BaseIndex):
     @inlineCallbacks
     def remove_from_list(
         self, redis: Union[BaseRedisProtocol, ConnectionHandler],
-        model_value
+        model_value: Any, count: int = 1
     ):
+        """
+        count = 0 to delete all
+        """
         if isinstance(redis, ConnectionHandler):
-            yield redis.lrem(self.redis_key, 1, model_value)
+            yield redis.lrem(self.redis_key, count, model_value)
         else:
-            redis.lrem(self.redis_key, 1, model_value)
+            redis.lrem(self.redis_key, count, model_value)
 
     @classmethod
     @inlineCallbacks
-    def search_models(cls, redis: ConnectionHandler, index_value, model_class: type):
+    def search_models(
+        cls, redis: ConnectionHandler, index_value, model_class: T
+    ):
         redis_key = cls._to_redis_key(index_value)
         result = yield redis.exists(redis_key)
         if not result:
@@ -107,12 +115,19 @@ class ListIndex(BaseIndex):
         returnValue(model_instances)
 
     @inlineCallbacks
-    def remove_from_index(self, redis: Union[BaseRedisProtocol, ConnectionHandler]):
-        yield redis.lrem(self.redis_key, 1, self._model_key_value)
+    def remove_from_index(
+        self, redis: Union[BaseRedisProtocol, ConnectionHandler],
+        count: int = 1
+    ):
+        """
+        count = 0 to remove all
+        """
+        yield redis.lrem(self.redis_key, count, self._model_key_value)
 
     @classmethod
     @inlineCallbacks
     def get_by_rpoplpush(cls, redis, index_value, model_class: type):
+        cls.__model__ = model_class
         redis_key = cls._to_redis_key(index_value)
         result = yield redis.exists(redis_key)
         if not result:

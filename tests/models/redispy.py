@@ -1,12 +1,14 @@
 from dataclasses import dataclass
 
-from RSO.index import HashIndex, SetIndex
+from redis import Redis
+from RSO.index import HashIndex, ListIndex, SetIndex
 from RSO.model import Model
 
 from .base import (
     BaseIndexGroupID,
     BaseIndexEmail,
     BaseIndexUsername,
+    BaseIndexQueue,
     BaseUserModel
 )
 
@@ -23,12 +25,17 @@ class SetIndexGroupID(BaseIndexGroupID, SetIndex):
     pass
 
 
+class ListIndexQueue(BaseIndexQueue, ListIndex):
+    pass
+
+
 @dataclass
 class UserModel(Model, BaseUserModel):
     __indexes__ = [
         SingleIndexUsername,
         SingleIndexEmail,
-        SetIndexGroupID
+        SetIndexGroupID,
+        ListIndexQueue
     ]
 
     def to_redis(self):
@@ -38,3 +45,13 @@ class UserModel(Model, BaseUserModel):
         if self.email is None:
             del dict_data['email']
         return dict_data
+
+    @classmethod
+    def search_by_queue(cls, redis: Redis, queue_id: int):
+        return ListIndexQueue.search_models(redis, queue_id, cls)
+
+    @classmethod
+    def search_by_list_by_rpushlpop(
+        cls, redis: Redis, queue_id: int
+    ):
+        return ListIndexQueue.x

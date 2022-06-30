@@ -24,9 +24,11 @@ class Model(BaseModel):
 
     def to_redis(self):
         dict_data = self.dict()
-        for key, value in dict_data.copy().items():
-            if value is None:
+        for key, value in self.dict().items():
+            if getattr(self, key, None) is None:
                 del dict_data[key]
+            elif isinstance(value, bool):
+                dict_data[key] = int(value)
             elif isinstance(value, (date, datetime)):
                 dict_data[key] = value.isoformat()
         return dict_data
@@ -38,9 +40,9 @@ class Model(BaseModel):
             pipe = redis.pipeline()
 
         if old_aioredis:
-            pipe.hmset_dict(self.redis_key, self.to_redis())
+            pipe.hset_dict(self.redis_key, mapping=self.to_redis())
         else:
-            pipe.hmset(self.redis_key, self.to_redis())
+            pipe.hset(self.redis_key, mapping=self.to_redis())
 
         for index_class in self.__indexes__:
             index = index_class.create_from_model(self)
@@ -76,7 +78,7 @@ class Model(BaseModel):
         if old_aioredis:
             pipe.hmset_dict(self.redis_key, self.to_redis())
         else:
-            pipe.hmset(self.redis_key, self.to_redis())
+            pipe.hset(self.redis_key, mapping=self.to_redis())
 
         for index_class in self.__indexes__:
             index = index_class.create_from_model(self)
@@ -97,7 +99,6 @@ class Model(BaseModel):
         redis_key = cls._to_redis_key(value)
         if bool(await redis.exists(redis_key)) is True:
             redis_data = await redis.hgetall(redis_key)
-            print(redis_data)
             return cls(**redis_data)
         else:
             return None

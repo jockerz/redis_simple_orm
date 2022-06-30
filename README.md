@@ -1,11 +1,13 @@
+# WARNING: Not Stable Yet
+
 # Redis Simple ORM
 
 Redis ORM in Simple Way.
 If you find this module is too simple, please take a look on [walrus](https://walrus.readthedocs.org).
 
-> __NOTE__: Please be aware, that this module is way too simple. 
+> __NOTE__: Please be aware, that this module is way too simple.
+> Your data will likely will be replaced without warning.
 > Do not use for your main data storage.
-> Better to use for cache or temporary alike storage with redis
 
 
 ## Installation
@@ -97,13 +99,13 @@ class UserModel(Model):
     group_id: int = field(default=None)
 
     def to_redis(self):
-    	result = {}
-    	for key, value in self.dict().items():
-    		# email and group_id might be None
+        result = {}
+        for key, value in self.dict().items():
+            # email and group_id might be None
     		if value is None:
-    			continue
-    		result[key] = value
-    	return result
+                continue
+            result[key] = value
+        return result
 
     """For easier access, we create some searching method"""
 
@@ -311,14 +313,139 @@ asyncio.run(main())
 
 ## Usage Example (`twisted` version)
 
-TODO
-
-
 ### Model
 
-TODO
+`model.py`
+
+```python
+from dataclasses import dataclass, field
+
+from twisted.internet.defer import inlineCallbacks
+from txredisapi import ConnectionHandler
+
+from RSO.txredisapi.index import HashIndex, SetIndex
+from RSO.txredisapi.model import Model
+
+REDIS_MODEL_PREFIX = 'MY_REDIS_MODEL'
+
+
+class SingleIndexUsername(HashIndex):
+    __prefix__ = REDIS_MODEL_PREFIX
+    __model__ = 'IndexUsername'
+    __key__ = 'username'
+
+
+class SingleIndexEmail(HashIndex):
+    __prefix__ = REDIS_MODEL_PREFIX
+    __model__ = 'IndexEmail'
+    __key__ = 'email'
+
+
+class SetIndexGroupID(SetIndex):
+    __prefix__ = REDIS_MODEL_PREFIX
+    __model__ = 'IndexGroupID'
+    __key__ = 'group_id'
+
+
+@dataclass
+class UserModel(Model):
+    __prefix__ = REDIS_MODEL_PREFIX
+    __model_name__ = 'user'
+    __key__ = 'user_id'
+    
+    __indexes__ = [
+        SingleIndexUsername,
+        SingleIndexEmail,
+        SetIndexGroupID,
+    ]
+
+    user_id: int
+    username: str
+    email: str = field(default=None)
+    group_id: int = field(default=None)
+
+    @classmethod
+    @inlineCallbacks
+    def search_by_username(
+        cls, redis: ConnectionHandler, username: str
+    ):
+        result = yield SingleIndexUsername.search_model(
+            redis, username, cls 
+        )
+        return result
+
+    @classmethod
+    @inlineCallbacks
+    def search_by_email(
+        cls, redis: ConnectionHandler, email: str
+    ):
+        result = yield SingleIndexEmail.search_model(
+            redis, email, cls 
+        )
+        return result
+
+    @classmethod
+    @inlineCallbacks
+    def search_by_email(
+        cls, redis: ConnectionHandler, group_id: int
+    ):
+        result = yield SetIndexGroupID.search_models(
+            redis, group_id, cls 
+        )
+        return result
+    
+    @classmethod
+    @inlineCallbacks
+    def search_group_member(cls, redis: ConnectionHandler, group_id: int):
+        result = yield SetIndexGroupID.search_models(redis, group_id, UserModel)
+        return result
+```
 
 
 ### CRUD
 
-TODO
+
+`crud.py`
+```python
+import txredisapi
+from twisted.internet.defer import inlineCallbacks
+
+from data import USERS
+from model import UserModel
+
+
+@inlineCallbacks
+def main():
+    redis = yield txredisapi.Connection()
+	for user_data in USERS:
+		user =  UserModel(**user_data)
+		yield user.save(redis)
+    
+    user = yield UserModel.search(redis, 1)
+    assert user is not None
+    
+    # search by username
+    user = yield UserModel.search_by_username(redis, 'first_user')
+    assert user is not None
+    user = yield UserModel.search_by_username(redis, 'not_found')
+    assert user is None
+    
+    # search by email
+	user = yield UserModel.search_by_email(redis, 'first_user@contoh.com')
+	assert user is not None
+	user = yield UserModel.search_by_email(redis, 'not_exist@contoh.com')
+	assert user is None
+    
+    # search by group id
+	users = yield AsyncUserModel.search_group_member(redis, 1)
+	assert len(users) == 3
+	users = yield AsyncUserModel.search_group_member(redis, 2)
+	assert len(users) == 2
+	users = yield AsyncUserModel.search_group_member(redis, 1_000_000)
+	assert len(users) == 0
+
+    
+if __name__ == "__main__":
+    main().addCallback(lambda ign: reactor.stop())
+    reactor.run()
+```

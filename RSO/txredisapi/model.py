@@ -12,14 +12,16 @@ class Model(BaseModel):
     @inlineCallbacks
     def is_exist(self, redis: ConnectionHandler):
         result = yield redis.exists(self.redis_key)
-        returnValue(bool(result))
+        return bool(result)
 
     @inlineCallbacks
     def save(self, redis: Union[BaseRedisProtocol, ConnectionHandler]):
         if isinstance(redis, ConnectionHandler):
             pipe = yield redis.multi()
+            do_commit = True
         else:
-            raise NotImplementedError
+            pipe = redis
+            do_commit = False
 
         pipe.hmset(self.redis_key, self.to_redis())
         for index_class in self.__indexes__ or []:
@@ -27,13 +29,17 @@ class Model(BaseModel):
                 continue
             index = index_class.create_from_model(self)
             yield index.save_index(pipe)
-        yield pipe.commit()
+        if do_commit:
+            yield pipe.commit()
 
     @inlineCallbacks
     def extended_save(
         self, redis: Union[BaseRedisProtocol, ConnectionHandler]
     ):
-        """extended save function to avoid multiple push on list index"""
+        """Extended save function to avoid multiple push on list index
+
+        Note: Use this method if you use List Index
+        """
         list_index_map = {}
         for index_class in self.__indexes__ or []:
             if not issubclass(index_class, ListIndex):
@@ -75,9 +81,8 @@ class Model(BaseModel):
         result = yield redis.exists(redis_key)
         if bool(result):
             redis_data = yield redis.hgetall(redis_key)
-            returnValue(cls(**redis_data))
-        else:
-            returnValue(None)
+            return cls(**redis_data)
+        return
 
     def dict(self):
         return asdict(self)

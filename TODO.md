@@ -2,3 +2,4 @@
  - [x] Pydantic -> dataclass
  - [x] Solve `fakeredis.aioredis` has no `connection` attribute
  - [ ] Update test
+ - [ ] ListIndex di index.py kok hilang?

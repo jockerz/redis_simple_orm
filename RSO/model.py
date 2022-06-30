@@ -26,7 +26,7 @@ class Model(BaseModel):
         else:
             pipe = redis.pipeline()
 
-        pipe.hmset(self.redis_key, self.to_redis())
+        pipe.hset(self.redis_key, mapping=self.to_redis())
         for index_class in self.__indexes__ or []:
             if getattr(self, index_class.__key__) is None:
                 continue
@@ -39,7 +39,6 @@ class Model(BaseModel):
         redis_key = cls._to_redis_key(value)
         if bool(redis.exists(redis_key)):
             redis_data = redis.hgetall(redis_key)
-            print(f' - {redis_key}: {redis_data}')
             return cls(**redis_data)
         else:
             return None
