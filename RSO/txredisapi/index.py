@@ -20,10 +20,14 @@ class HashIndex(BaseIndex):
     def save_index(self, redis: Union[BaseRedisProtocol, ConnectionHandler]):
         index_value = getattr(self.__model__, self.__key__)
         if isinstance(redis, BaseRedisProtocol):
-            redis.hmset(self.redis_key, {index_value: self._model_key_value})
+            redis.hmset(
+                self.redis_key, {index_value: self._model_key_value}
+            )
             returnValue(None)
         else:
-            yield redis.hmset(self.redis_key, {index_value: self._model_key_value})
+            yield redis.hmset(
+                self.redis_key, {index_value: self._model_key_value}
+            )
 
     @classmethod
     @inlineCallbacks
@@ -34,13 +38,16 @@ class HashIndex(BaseIndex):
         is_exist = yield redis.exists(index.redis_key)
         if not is_exist:
             return
-
         model_primary_value = yield redis.hget(index.redis_key, index_value)
+        if model_primary_value is None:
+            return
         result = yield model_class.search(redis, model_primary_value)
         returnValue(result)
 
     @inlineCallbacks
-    def remove_from_index(self, redis: Union[BaseRedisProtocol, ConnectionHandler]):
+    def remove_from_index(
+        self, redis: Union[BaseRedisProtocol, ConnectionHandler]
+    ):
         index_value = getattr(self.__model__, self.__key__)
         yield redis.hdel(self.redis_key, index_value)
         del self

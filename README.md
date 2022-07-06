@@ -187,14 +187,14 @@ main()
 ```python
 from dataclasses import dataclass, field
 
-from aioredis.commands import Redis
+from aioredis import Redis
 from RSO.aioredis.index import (
 	HashIndex as AsyncHashIndex, 
 	SetIndex as AsyncSetIndex
 )
 from RSO.aioredis.model import Model as AsyncModel
 
-from .data import USERS
+from data import USERS
 
 
 REDIS_MODEL_PREFIX = 'MY_REDIS_MODEL'
@@ -265,14 +265,13 @@ class AsyncUserModel(AsyncModel):
 ```python
 import asyncio
 
-import aioredis
-from aioredis.commands import Redis
+from aioredis import Redis
 
 from data import USERS
 from model import AsyncUserModel
 
 
-redis = aioredis.from_url('redis://localhost', decode_responses=True)
+redis = Redis.from_url('redis://localhost', decode_responses=True)
 
 
 async def main():
@@ -408,6 +407,7 @@ class UserModel(Model):
 `crud.py`
 ```python
 import txredisapi
+from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 
 from data import USERS
@@ -417,35 +417,38 @@ from model import UserModel
 @inlineCallbacks
 def main():
     redis = yield txredisapi.Connection()
-	for user_data in USERS:
-		user =  UserModel(**user_data)
-		yield user.save(redis)
-    
+    for user_data in USERS:
+        user = UserModel(**user_data)
+        yield user.save(redis)
+
     user = yield UserModel.search(redis, 1)
     assert user is not None
-    
+
     # search by username
     user = yield UserModel.search_by_username(redis, 'first_user')
     assert user is not None
     user = yield UserModel.search_by_username(redis, 'not_found')
     assert user is None
-    
-    # search by email
-	user = yield UserModel.search_by_email(redis, 'first_user@contoh.com')
-	assert user is not None
-	user = yield UserModel.search_by_email(redis, 'not_exist@contoh.com')
-	assert user is None
-    
-    # search by group id
-	users = yield AsyncUserModel.search_group_member(redis, 1)
-	assert len(users) == 3
-	users = yield AsyncUserModel.search_group_member(redis, 2)
-	assert len(users) == 2
-	users = yield AsyncUserModel.search_group_member(redis, 1_000_000)
-	assert len(users) == 0
 
-    
+    # search by email
+    user = yield UserModel.search_by_email(redis, 'first_user@contoh.com')
+    assert user is not None
+    user = yield UserModel.search_by_email(redis, 'not_exist@contoh.com')
+    assert user is None
+
+    # search by group id
+    users = yield UserModel.search_group_member(redis, 1)
+    assert len(users) == 3
+    users = yield UserModel.search_group_member(redis, 2)
+    assert len(users) == 2
+    users = yield UserModel.search_group_member(redis, 1_000_000)
+    assert len(users) == 0
+
+
 if __name__ == "__main__":
-    main().addCallback(lambda ign: reactor.stop())
+    main()\
+        .addCallback(lambda ign: reactor.stop())\
+        .addErrback(lambda ign: reactor.stop())
     reactor.run()
+
 ```
