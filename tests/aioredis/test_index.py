@@ -6,9 +6,6 @@ from ..models.aioredis import (
     UserModel,
     ExtendedUserModel,
     ListIndexQueue,
-    SingleIndexEmail,
-    SingleIndexUsername,
-    SetIndexGroupID
 )
 
 

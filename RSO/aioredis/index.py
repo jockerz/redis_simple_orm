@@ -151,7 +151,6 @@ class SetIndex(BaseIndex):
 
     @classmethod
     async def search_models(cls, redis: Redis, index_value, model_class: BaseModel):
-        index = cls.create_from_model(model_class)
         redis_key = cls._to_redis_key(index_value)
         if not bool(await redis.exists(redis_key)):
             return []

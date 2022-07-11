@@ -1,8 +1,8 @@
 from datetime import date
 
 from .models.redispy import (
-    UserModel, 
-    SingleIndexUsername, 
+    UserModel,
+    SingleIndexUsername,
     SingleIndexEmail,
     SetIndexGroupID
 )

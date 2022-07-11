@@ -2,7 +2,7 @@ from typing import Union
 
 from dataclasses import asdict
 from txredisapi import BaseRedisProtocol, ConnectionHandler
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 
 from RSO.base import BaseModel
 from .index import ListIndex
