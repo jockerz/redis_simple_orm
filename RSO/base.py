@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from dataclasses import asdict
 from typing import List, TypeVar
 
 
@@ -63,3 +64,17 @@ class BaseModel:
     @property
     def redis_key(self):
         return self._to_redis_key(getattr(self, self.__key__))
+
+    def dict(self) -> dict:
+        return asdict(self)
+
+    def to_redis(self) -> dict:
+        dict_data = self.dict()
+        for key, value in dict_data.copy().items():
+            if value is None:
+                del dict_data[key]
+        return dict_data
+
+    @classmethod
+    def from_redis(cls, dict_data: dict) -> dict:
+        return dict_data

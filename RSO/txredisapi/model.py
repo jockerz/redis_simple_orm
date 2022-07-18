@@ -81,18 +81,9 @@ class Model(BaseModel):
         result = yield redis.exists(redis_key)
         if bool(result):
             redis_data = yield redis.hgetall(redis_key)
-            return cls(**redis_data)
+            dict_data = cls.from_redis(redis_data)
+            return cls(**dict_data)
         return
-
-    def dict(self):
-        return asdict(self)
-
-    def to_redis(self):
-        dict_data = self.dict()
-        for key, value in self.dict().items():
-            if value is None:
-                del dict_data[key]
-        return dict_data
 
     @inlineCallbacks
     def delete(self, redis: Union[BaseRedisProtocol, ConnectionHandler]):

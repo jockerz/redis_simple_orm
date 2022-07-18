@@ -1,5 +1,20 @@
 # Changelog
 
+>> Note: Make sure to edit `version` on `__init__.py`
+
+
+## 1.2.2
+
+### Added
+
+ - add method `from_redis` to process redis data before loaded to `model` class. 
+
+
+### Updated
+
+ - Move `to_redis` to `base`
+
+
 ## 1.2.1
 
  - Use `BaseModel.__post_init__` convert string certain types, 

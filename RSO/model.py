@@ -10,16 +10,6 @@ class Model(BaseModel):
     def is_exists(self, redis: Redis):
         return bool(redis.exists(self.redis_key))
 
-    def dict(self):
-        return asdict(self)
-
-    def to_redis(self):
-        dict_data = self.dict()
-        for key, value in dict_data.copy().items():
-            if value is None:
-                del dict_data[key]
-        return dict_data
-
     def save(self, redis: Union[Pipeline, Redis]):
         if isinstance(redis, Pipeline):
             pipe = redis
@@ -39,7 +29,8 @@ class Model(BaseModel):
         redis_key = cls._to_redis_key(value)
         if bool(redis.exists(redis_key)):
             redis_data = redis.hgetall(redis_key)
-            return cls(**redis_data)
+            dict_data = cls.from_redis(redis_data)
+            return cls(**dict_data)
         else:
             return None
 

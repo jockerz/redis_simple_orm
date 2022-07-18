@@ -19,9 +19,6 @@ class Model(BaseModel):
     async def is_exists(self, redis: Redis):
         return bool(await redis.exists(self.redis_key))
 
-    def dict(self):
-        return asdict(self)
-
     def to_redis(self):
         dict_data = self.dict()
         for key, value in self.dict().items():
@@ -99,7 +96,8 @@ class Model(BaseModel):
         redis_key = cls._to_redis_key(value)
         if bool(await redis.exists(redis_key)) is True:
             redis_data = await redis.hgetall(redis_key)
-            return cls(**redis_data)
+            dict_data = cls.from_redis(redis_data)
+            return cls(**dict_data)
         else:
             return None
 
