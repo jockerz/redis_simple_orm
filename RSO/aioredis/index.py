@@ -1,4 +1,5 @@
-from typing import Any, TypeVar, Union
+import typing as t
+from typing import Any, Type, TypeVar, Union
 
 from aioredis import __version__ as aioredis_version
 try:
@@ -17,6 +18,11 @@ T = TypeVar('T')
 
 
 class HashIndex(BaseIndex):
+
+    @classmethod
+    def _to_redis_key(cls):
+        return f'{cls.__prefix__}::{cls.__model__.__model_name__}::'\
+               f'{cls.__index_name__}::{cls.__key__}'
 
     @property
     def redis_key(self):
@@ -37,13 +43,14 @@ class HashIndex(BaseIndex):
 
     @classmethod
     async def search_model(
-        cls, redis: Redis, index_value, model_class: BaseModel
+        cls, redis: Redis, index_value, model_class: Type[BaseModel]
     ):
-        index = cls.create_from_model(model_class)
-        if not await redis.exists(index.redis_key):
+        setattr(cls, '__model__', model_class)
+        redis_key = cls._to_redis_key()
+        if not await redis.exists(redis_key):
             return
 
-        model_primary_value = await redis.hmget(index.redis_key, index_value)
+        model_primary_value = await redis.hmget(redis_key, index_value)
         if model_primary_value and isinstance(model_primary_value, list):
             model_primary_value = model_primary_value[0]
         return await model_class.search(redis, model_primary_value)
@@ -100,7 +107,8 @@ class ListIndex(BaseIndex):
             await redis.lrem(self.redis_key, count, model_value)
 
     @classmethod
-    async def search_models(cls, redis: Redis, index_value, model_class: type):
+    async def search_models(cls, redis: Redis, index_value, model_class: Type[BaseModel]):
+        setattr(cls, '__model__', model_class)
         redis_key = cls._to_redis_key(index_value)
         if not bool(await redis.exists(redis_key)):
             return []
@@ -118,7 +126,7 @@ class ListIndex(BaseIndex):
         redis.lrem(self.redis_key, count, self._model_key_value)
 
     @classmethod
-    async def get_by_rpoplpush(cls, redis, index_value, model_class: type):
+    async def get_by_rpoplpush(cls, redis, index_value, model_class: Type[BaseModel]):
         redis_key = cls._to_redis_key(index_value)
         if bool(await redis.exists(redis_key)) is False:
             return
@@ -150,7 +158,10 @@ class SetIndex(BaseIndex):
         return await redis.smembers(redis_key)
 
     @classmethod
-    async def search_models(cls, redis: Redis, index_value, model_class: BaseModel):
+    async def search_models(
+        cls, redis: Redis, index_value, model_class: Type[BaseModel]
+    ):
+        setattr(cls, '__model__', model_class)
         redis_key = cls._to_redis_key(index_value)
         if not bool(await redis.exists(redis_key)):
             return []

@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from dataclasses import asdict
-from typing import List, TypeVar
+from typing import List, Type, TypeVar
 
 
 T = TypeVar('T')
@@ -22,7 +22,7 @@ class BaseIndex:
         return getattr(self.__model__, self.__model__.__key__)
 
     @classmethod
-    def create_from_model(cls, model_instance: 'BaseModel'):
+    def create_from_model_class(cls, model_instance: Type["BaseModel"]):
         cls.__model__ = model_instance
         return cls()
 
@@ -78,3 +78,7 @@ class BaseModel:
     @classmethod
     def from_redis(cls, dict_data: dict) -> dict:
         return dict_data
+
+    @classmethod
+    def search(cls, redis, value):
+        raise NotImplementedError

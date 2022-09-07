@@ -27,7 +27,7 @@ class Model(BaseModel):
         for index_class in self.__indexes__ or []:
             if getattr(self, index_class.__key__, None) is None:
                 continue
-            index = index_class.create_from_model(self)
+            index = index_class.create_from_model_class(self)
             yield index.save_index(pipe)
         if do_commit:
             yield pipe.commit()
@@ -44,7 +44,7 @@ class Model(BaseModel):
         for index_class in self.__indexes__ or []:
             if not issubclass(index_class, ListIndex):
                 continue
-            index = index_class.create_from_model(self)
+            index = index_class.create_from_model_class(self)
             model_key_value = getattr(self, self.__key__, None)
             if model_key_value is None:
                 exist_on_index = False
@@ -63,7 +63,7 @@ class Model(BaseModel):
         for index_class in self.__indexes__ or []:
             if getattr(self, index_class.__key__, None) is None:
                 continue
-            index = index_class.create_from_model(self)
+            index = index_class.create_from_model_class(self)
             yield index.save_index(pipe)
 
         # remove duplicate on index queue list
@@ -94,7 +94,7 @@ class Model(BaseModel):
         for index_class in self.__indexes__ or []:
             if getattr(self, index_class.__key__) is None:
                 continue
-            index = index_class.create_from_model(self)
+            index = index_class.create_from_model_class(self)
             index.remove_from_index(pipe)
         pipe.delete(self.redis_key)
         yield pipe.commit()

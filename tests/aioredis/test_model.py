@@ -25,13 +25,13 @@ class TestModelCreate:
         await user.save(async_redis)
         assert await user.is_exists(async_redis) is True
 
-        index_username = SingleIndexUsername.create_from_model(user)
+        index_username = SingleIndexUsername.create_from_model_class(user)
         assert await async_redis.exists(index_username.redis_key)
 
-        index_email = SingleIndexEmail.create_from_model(user)
+        index_email = SingleIndexEmail.create_from_model_class(user)
         assert await async_redis.exists(index_email.redis_key)
 
-        index_group_id = SetIndexGroupID.create_from_model(user)
+        index_group_id = SetIndexGroupID.create_from_model_class(user)
         redis_key = index_group_id._to_redis_key(user.group_id)
         assert await async_redis.exists(redis_key)
 

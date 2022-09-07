@@ -25,7 +25,7 @@ class TestListIndex:
         )
         yield user.save(tx_redis)
 
-        index = ListIndexQueue.create_from_model(user)
+        index = ListIndexQueue.create_from_model_class(user)
 
         res = yield index.is_exist_on_list(tx_redis, user.user_id)
         assert res is True
@@ -48,7 +48,7 @@ class TestListIndex:
         )
         yield user.save(tx_redis)
 
-        index = ListIndexQueue.create_from_model(user)
+        index = ListIndexQueue.create_from_model_class(user)
 
         res = yield index.is_exist_on_list(tx_redis, user.user_id)
         assert res is True
@@ -74,7 +74,7 @@ class TestListIndex:
         yield user.save(tx_redis)
         yield user.save(tx_redis)
 
-        index = ListIndexQueue.create_from_model(user)
+        index = ListIndexQueue.create_from_model_class(user)
 
         user_id_list = yield tx_redis.lrange(index.redis_key, 0, -1)
         assert user_id_list.count(user.user_id) == 1
@@ -90,7 +90,7 @@ class TestListIndex:
         )
         yield user.save(tx_redis)
 
-        index = ListIndexQueue.create_from_model(user)
+        index = ListIndexQueue.create_from_model_class(user)
 
         user_id_list = yield tx_redis.lrange(index.redis_key, 0, -1)
         assert user_id_list.count(user.user_id) == 0
@@ -107,7 +107,7 @@ class TestListIndex:
             user = ExtendedUserModel(**data)
             yield user.save(tx_redis)
 
-        index = ListIndexQueue.create_from_model(user)
+        index = ListIndexQueue.create_from_model_class(user)
         old_list_data = yield tx_redis.lrange(index.redis_key, 0, -1)
         assert len(old_list_data) == 2
 
@@ -130,7 +130,7 @@ class TestListIndex:
         yield user.save(tx_redis)
         yield user.save(tx_redis)
 
-        index = ListIndexQueue.create_from_model(user)
+        index = ListIndexQueue.create_from_model_class(user)
 
         res = yield index.is_exist_on_list(tx_redis, user.user_id)
         assert res is True
@@ -233,4 +233,6 @@ class TestSetIndex:
         res = yield SetIndexGroupID.search_models(
             tx_redis, 10, UserModel
         )
+
+        assert isinstance(res, list)
         assert len(res) == 0

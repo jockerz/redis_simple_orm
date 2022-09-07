@@ -1,4 +1,4 @@
-# WARNING: Not Stable Yet
+# WARNING: Not recommended for main data storage
 
 # Redis Simple ORM
 
@@ -136,7 +136,7 @@ from model import UserModel
 redis = Redis(decode_responses=True)
 
 
-def create_user(redis, user_data: dict):
+def create_user(redis: Redis, user_data: dict):
 	user = UserModel(**user_data)
 	user.save(redis)
 	return user

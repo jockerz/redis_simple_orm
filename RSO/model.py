@@ -20,7 +20,7 @@ class Model(BaseModel):
         for index_class in self.__indexes__ or []:
             if getattr(self, index_class.__key__) is None:
                 continue
-            index = index_class.create_from_model(self)
+            index = index_class.create_from_model_class(self)
             index.save_index(pipe)
         pipe.execute()
 
@@ -41,7 +41,7 @@ class Model(BaseModel):
             pipe = redis.pipeline()
 
         for index_class in self.__indexes__:
-            index = index_class.create_from_model(self)
+            index = index_class.create_from_model_class(self)
             index.remove_from_index(pipe)
 
         pipe.delete(self.redis_key)

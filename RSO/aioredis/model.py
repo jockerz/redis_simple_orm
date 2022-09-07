@@ -42,7 +42,7 @@ class Model(BaseModel):
             pipe.hset(self.redis_key, mapping=self.to_redis())
 
         for index_class in self.__indexes__:
-            index = index_class.create_from_model(self)
+            index = index_class.create_from_model_class(self)
             if getattr(self, index_class.__key__, None) is None:
                 continue
             await index.save_index(pipe)
@@ -57,7 +57,7 @@ class Model(BaseModel):
         for index_class in self.__indexes__ or []:
             if not issubclass(index_class, ListIndex):
                 continue
-            index = index_class.create_from_model(self)
+            index = index_class.create_from_model_class(self)
             model_key_value = getattr(self, self.__key__, None)
             if model_key_value is None:
                 exist_on_index = False
@@ -78,7 +78,7 @@ class Model(BaseModel):
             pipe.hset(self.redis_key, mapping=self.to_redis())
 
         for index_class in self.__indexes__:
-            index = index_class.create_from_model(self)
+            index = index_class.create_from_model_class(self)
             if getattr(self, index_class.__key__, None) is None:
                 continue
             await index.save_index(pipe)
@@ -110,7 +110,7 @@ class Model(BaseModel):
         for index_class in self.__indexes__:
             if getattr(self, index_class.__key__) is None:
                 continue
-            index = index_class.create_from_model(self)
+            index = index_class.create_from_model_class(self)
             await index.remove_from_index(pipe)
 
         pipe.delete(self.redis_key)

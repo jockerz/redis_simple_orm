@@ -1,4 +1,4 @@
-from typing import Any, Union, TypeVar
+from typing import Any, Union, Type, TypeVar
 
 from txredisapi import BaseRedisProtocol, ConnectionHandler
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -9,12 +9,14 @@ T = TypeVar('T')
 
 
 class HashIndex(BaseIndex):
+    @classmethod
+    def _to_redis_key(cls) -> str:
+        return f'{cls.__prefix__}::{cls.__model__.__model_name__}::'\
+               f'{cls.__index_name__}::{cls.__key__}'
 
     @property
-    def redis_key(self):
-        model_prefix = self.__model__.__model_name__
-        return f'{self.__prefix__}::{model_prefix}::{self.__index_name__}::'\
-               f'{self.__key__}'
+    def redis_key(self) -> str:
+        return self._to_redis_key()
 
     @inlineCallbacks
     def save_index(self, redis: Union[BaseRedisProtocol, ConnectionHandler]):
@@ -32,13 +34,14 @@ class HashIndex(BaseIndex):
     @classmethod
     @inlineCallbacks
     def search_model(
-        cls, redis: ConnectionHandler, index_value, model_class: T
+        cls, redis: ConnectionHandler, index_value, model_class: Type[BaseModel]
     ):
-        index = cls.create_from_model(model_class)
-        is_exist = yield redis.exists(index.redis_key)
+        setattr(cls, '__model__', model_class)
+        redis_key = cls._to_redis_key()
+        is_exist = yield redis.exists(redis_key)
         if not is_exist:
             return
-        model_primary_value = yield redis.hget(index.redis_key, index_value)
+        model_primary_value = yield redis.hget(redis_key, index_value)
         if model_primary_value is None:
             return
         result = yield model_class.search(redis, model_primary_value)
@@ -80,7 +83,7 @@ class ListIndex(BaseIndex):
     def get_members(cls, redis: ConnectionHandler, index_value: Any):
         redis_key = cls._to_redis_key(index_value)
         result = yield redis.lrange(redis_key, 0, -1)
-        return returnValue(result)
+        return result
 
     @inlineCallbacks
     def is_exist_on_list(
@@ -109,6 +112,7 @@ class ListIndex(BaseIndex):
     def search_models(
         cls, redis: ConnectionHandler, index_value, model_class: T
     ):
+        setattr(cls, '__model__', model_class)
         redis_key = cls._to_redis_key(index_value)
         result = yield redis.exists(redis_key)
         if not result:
@@ -119,7 +123,7 @@ class ListIndex(BaseIndex):
         for value in result:
             model_instance = yield model_class.search(redis, value)
             model_instances.append(model_instance)
-        returnValue(model_instances)
+        return model_instances
 
     @inlineCallbacks
     def remove_from_index(
@@ -133,7 +137,7 @@ class ListIndex(BaseIndex):
 
     @classmethod
     @inlineCallbacks
-    def get_by_rpoplpush(cls, redis, index_value, model_class: type):
+    def get_by_rpoplpush(cls, redis, index_value, model_class: Type[BaseModel]):
         cls.__model__ = model_class
         redis_key = cls._to_redis_key(index_value)
         result = yield redis.exists(redis_key)
@@ -149,8 +153,7 @@ class SetIndex(BaseIndex):
 
     @classmethod
     def _to_redis_key(cls, value):
-        model_prefix = cls.__model__.__model_name__
-        first_part = f'{cls.__prefix__}::{model_prefix}::'\
+        first_part = f'{cls.__prefix__}::{cls.__model__.__model_name__}::'\
                      f'{cls.__index_name__}::{cls.__key__}'
         return f'{first_part}:{value}'
 
@@ -176,19 +179,21 @@ class SetIndex(BaseIndex):
 
     @classmethod
     @inlineCallbacks
-    def search_models(cls, redis: ConnectionHandler, index_value, model_class: type):
+    def search_models(
+        cls, redis: ConnectionHandler, index_value, model_class: Type[BaseModel]
+    ):
+        setattr(cls, '__model__', model_class)
         redis_key = cls._to_redis_key(index_value)
         result = yield redis.exists(redis_key)
         if not result:
-            returnValue([])
-            return
+            return []
 
         model_instances = []
         result = yield redis.smembers(redis_key)
         for value in result:
             model_instance = yield model_class.search(redis, value)
             model_instances.append(model_instance)
-        returnValue(model_instances)
+        return model_instances
 
     @inlineCallbacks
     def remove_from_index(self, redis: Union[BaseRedisProtocol, ConnectionHandler]):

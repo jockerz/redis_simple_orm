@@ -70,7 +70,7 @@ class TestListIndex:
         )
         user.save(sync_redis)
 
-        index = ListIndexQueue.create_from_model(user)
+        index = ListIndexQueue.create_from_model_class(user)
 
         assert index.is_exist_on_list(sync_redis, user.user_id) is True
         assert sync_redis.exists(index.redis_key)
@@ -89,7 +89,7 @@ class TestListIndex:
         )
         user.save(sync_redis)
 
-        index = ListIndexQueue.create_from_model(user)
+        index = ListIndexQueue.create_from_model_class(user)
         assert index.is_exist_on_list(sync_redis, user.user_id) is True
 
         user.save(sync_redis)
@@ -104,7 +104,7 @@ class TestListIndex:
             birth_date=date.fromisoformat('1999-09-09')
         )
         user.save(sync_redis)
-        index = ListIndexQueue.create_from_model(user)
+        index = ListIndexQueue.create_from_model_class(user)
 
         assert len(sync_redis.lrange(index.redis_key, 0, -1)) == 0
         assert index.is_exist_on_list(sync_redis, user.user_id) is False
@@ -117,7 +117,7 @@ class TestListIndex:
             user = UserModel(**data)
             user.save(sync_redis)
 
-        index = ListIndexQueue.create_from_model(user)
+        index = ListIndexQueue.create_from_model_class(user)
 
         old_list_data = sync_redis.lrange(index.redis_key, 0, -1)
 
@@ -140,7 +140,7 @@ class TestListIndex:
             birth_date=date.fromisoformat('1999-09-09')
         )
         user.save(sync_redis)
-        index = ListIndexQueue.create_from_model(user)
+        index = ListIndexQueue.create_from_model_class(user)
         user.delete(sync_redis)
 
         assert index.is_exist_on_list(sync_redis, user.user_id) is False

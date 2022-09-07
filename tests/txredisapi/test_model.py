@@ -30,19 +30,19 @@ class TestModelCreate:
         res = yield user.is_exist(tx_redis)
         assert res is True
 
-        index_username = SingleIndexUsername.create_from_model(user)
+        index_username = SingleIndexUsername.create_from_model_class(user)
         res = yield tx_redis.exists(index_username.redis_key)
         assert bool(res) is True
 
-        index_email = SingleIndexEmail.create_from_model(user)
+        index_email = SingleIndexEmail.create_from_model_class(user)
         res = yield tx_redis.exists(index_email.redis_key)
         assert bool(res) is True
 
-        index_group_id = SetIndexGroupID.create_from_model(user)
+        index_group_id = SetIndexGroupID.create_from_model_class(user)
         res = yield tx_redis.exists(index_group_id.redis_key)
         assert bool(res) is True
 
-        index_queue = ListIndexQueue.create_from_model(user)
+        index_queue = ListIndexQueue.create_from_model_class(user)
         res = yield tx_redis.exists(index_queue.redis_key)
         assert bool(res) is True
 
@@ -109,7 +109,7 @@ class TestModelDelete:
         for index_class in UserModel.__indexes__ or []:
             if getattr(user, index_class.__key__) is None:
                 continue
-            index = index_class.create_from_model(user)
+            index = index_class.create_from_model_class(user)
             index_keys.append(index.redis_key)
             res = yield tx_redis.exists(index.redis_key)
             assert bool(res) is True
