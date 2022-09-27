@@ -1,5 +1,6 @@
 from dataclasses import asdict
 from datetime import date, datetime
+from enum import Enum
 from typing import Union
 
 from aioredis import __version__ as aioredis_version
@@ -28,6 +29,8 @@ class Model(BaseModel):
                 dict_data[key] = int(value)
             elif isinstance(value, (date, datetime)):
                 dict_data[key] = value.isoformat()
+            elif isinstance(value, Enum):
+                dict_data[key] = value.value
         return dict_data
 
     async def save(self, redis: Union[Pipeline, Redis]):

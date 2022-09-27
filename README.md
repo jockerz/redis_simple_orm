@@ -9,6 +9,12 @@ If you find this module is too simple, please take a look on [walrus](https://wa
 > Your data will likely will be replaced without warning.
 > Do not use for your main data storage.
 
+## Suggestion for this Module Usage
+
+ - In case you need to update `index` value,
+   Implement `update` method on `Model` that will remove old `index` value 
+   on index data / redis, then save new `index` value
+
 
 ## Installation
 
