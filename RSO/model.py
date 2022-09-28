@@ -28,8 +28,9 @@ class Model(BaseModel):
     def search(cls, redis: Redis, value):
         redis_key = cls._to_redis_key(value)
         if bool(redis.exists(redis_key)):
-            redis_data = redis.hgetall(redis_key)
-            dict_data = cls.from_redis(redis_data)
+            fields = cls.get_fields()
+            redis_data = redis.hmget(redis_key, fields)
+            dict_data = cls.from_redis(dict(zip(fields, redis_data)))
             return cls(**dict_data)
         else:
             return None

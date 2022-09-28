@@ -98,8 +98,9 @@ class Model(BaseModel):
     async def search(cls, redis: Redis, value):
         redis_key = cls._to_redis_key(value)
         if bool(await redis.exists(redis_key)) is True:
-            redis_data = await redis.hgetall(redis_key)
-            dict_data = cls.from_redis(redis_data)
+            fields = cls.get_fields()
+            redis_data = await redis.hmget(redis_key, fields)
+            dict_data = cls.from_redis(dict(zip(fields, redis_data)))
             return cls(**dict_data)
         else:
             return None

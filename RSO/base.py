@@ -1,6 +1,6 @@
 from datetime import date, datetime
-from dataclasses import asdict
-from typing import List, Type, TypeVar
+from dataclasses import asdict, fields
+from typing import Any, List, Type, TypeVar
 
 
 T = TypeVar('T')
@@ -35,6 +35,10 @@ class BaseModel:
     # Object property name that are to be redis key suffix
     __key__: str
     __indexes__: List[BaseIndex] = []
+
+    @classmethod
+    def get_fields(cls) -> List[str]:
+        return [f.name for f in fields(cls)]
 
     def __post_init__(self):
         for field, desc in self.__dataclass_fields__.items():

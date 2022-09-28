@@ -3,6 +3,13 @@
 >> Note: Make sure to edit `version` on `__init__.py`
 
 
+## 1.2.4
+
+### Updated
+
+ - `Model.search` now only load model fields from redis
+
+
 ## 1.2.2
 
 ### Added
