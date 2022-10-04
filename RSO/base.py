@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from dataclasses import asdict, fields
-from typing import Any, List, Type, TypeVar
-
+from typing import List, Type, TypeVar
+from uuid import UUID
 
 T = TypeVar('T')
 
@@ -19,7 +19,10 @@ class BaseIndex:
 
     @property
     def _model_key_value(self):
-        return getattr(self.__model__, self.__model__.__key__)
+        value = getattr(self.__model__, self.__model__.__key__)
+        if isinstance(value, UUID):
+            value = str(value)
+        return value
 
     @classmethod
     def create_from_model_class(cls, model_instance: Type["BaseModel"]):
@@ -63,6 +66,8 @@ class BaseModel:
 
     @classmethod
     def _to_redis_key(cls, value):
+        if isinstance(value, UUID):
+            value = str(value)
         return f'{cls.__prefix__}::{cls.__model_name__}:{value}'
 
     @property
