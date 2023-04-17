@@ -1,4 +1,4 @@
-# WARNING: Not recommended for main data storage
+# WARNING: Old data might be replaced with new one without warning
 
 # Redis Simple ORM
 
@@ -26,7 +26,8 @@ pip install redis_simple_orm[redis-py]
 
 __OR__
 
-Async with [`aioredis`](https://aioredis.readthedocs.io)
+Async with [`aioredis`](https://aioredis.readthedocs.io) 
+or [`redis.asyncio.Redis`](`https://redis-py.readthedocs.io/en/stable/examples/asyncio_examples.html`)
 
 ```bash
 pip install redis_simple_orm[aioredis]

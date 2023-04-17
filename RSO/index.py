@@ -38,7 +38,6 @@ class HashIndex(BaseIndex):
     def remove_from_index(self, redis: Union[Pipeline, Redis]):
         index_value = getattr(self.__model__, self.__key__)
         redis.hdel(self.redis_key, index_value)
-        del self
 
 
 class ListIndex(BaseIndex):

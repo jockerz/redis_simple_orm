@@ -3,8 +3,8 @@ import pytest_twisted
 
 import aioredis
 import txredisapi
-# from fakeredis import FakeRedis, aioredis as fake_aioredis
 from redis import Redis as SyncRedis
+from redis.asyncio import Redis as AsyncRedis
 from twisted.internet.defer import inlineCallbacks
 
 REDIS_DB = 15
@@ -12,16 +12,14 @@ REDIS_PASS = 'RedisPassword'
 
 
 @pytest.fixture
-def sync_redis():
-    # server = FakeRedis(decode_responses=True)
-    # server.connected = True
+def sync_redis() -> SyncRedis:
     server = SyncRedis(db=REDIS_DB, password=REDIS_PASS, decode_responses=True)
     server.flushdb()
     return server
 
 
 @pytest.fixture
-async def async_redis():
+async def async_redis() -> aioredis.Redis:
     if aioredis.__version__ >= '2.0.0':
         r = await aioredis.Redis(
             db=REDIS_DB, password=REDIS_PASS,
@@ -34,6 +32,14 @@ async def async_redis():
         )
     await r.flushdb()
     return r
+
+
+@pytest.fixture
+async def async_redis_2() -> AsyncRedis:
+    conn = AsyncRedis(db=REDIS_DB, password=REDIS_PASS, decode_responses=True)
+    await conn.flushdb()
+    return conn
+
 
 
 @pytest.fixture

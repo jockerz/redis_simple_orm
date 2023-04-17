@@ -3,6 +3,11 @@
 >> Note: Make sure to edit `version` on `__init__.py`
 
 
+## 1.2.5
+
+ - remove `delete self` on `Index` class
+
+
 ## 1.2.4
 
 ### Updated
