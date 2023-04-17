@@ -58,7 +58,6 @@ class HashIndex(BaseIndex):
     async def remove_from_index(self, redis: Pipeline):
         index_value = getattr(self.__model__, self.__key__)
         redis.hdel(self.redis_key, index_value)
-        del self
 
 
 class ListIndex(BaseIndex):

@@ -53,7 +53,6 @@ class HashIndex(BaseIndex):
     ):
         index_value = getattr(self.__model__, self.__key__)
         yield redis.hdel(self.redis_key, index_value)
-        del self
 
 
 class ListIndex(BaseIndex):
