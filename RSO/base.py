@@ -11,8 +11,8 @@ REDIS_MODEL_PREFIX = 'simple_redis_orm'
 
 class BaseIndex:
     # prefix for redis key
-    __prefix__: str = REDIS_MODEL_PREFIX
-    __index_name__: str = 'index_base'
+    __prefix__: str
+    __index_name__: str = 'index'
     # Model class that using this index
     __model__: T
     __key__: str
@@ -32,12 +32,12 @@ class BaseIndex:
 
 class BaseModel:
     # prefix for redis key
-    __prefix__: str = REDIS_MODEL_PREFIX
+    __prefix__: str
     # infix for redis key and model name
     __model_name__: str
     # Object property name that are to be redis key suffix
     __key__: str
-    __indexes__: List[BaseIndex] = []
+    __indexes__: List[BaseIndex]
 
     @classmethod
     def get_fields(cls) -> List[str]:
@@ -68,6 +68,8 @@ class BaseModel:
     def _to_redis_key(cls, value):
         if isinstance(value, UUID):
             value = str(value)
+        if cls.__prefix__ is None:
+            return f'{cls.__model_name__}:{value}'
         return f'{cls.__prefix__}::{cls.__model_name__}:{value}'
 
     @property

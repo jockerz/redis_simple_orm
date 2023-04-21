@@ -50,8 +50,23 @@ class UserModel(Model, BaseUserModel):
     def search_by_queue(cls, redis: Redis, queue_id: int):
         return ListIndexQueue.search_models(redis, queue_id, cls)
 
-    @classmethod
-    def search_by_list_by_rpushlpop(
-        cls, redis: Redis, queue_id: int
-    ):
-        return ListIndexQueue.x
+
+class NoPrefixSingleIndexUsername(BaseIndexUsername, HashIndex):
+    __prefix__ = None
+
+
+class NoPrefixSingleIndexEmail(BaseIndexEmail, HashIndex):
+    __prefix__ = None
+
+
+class NoPrefixSetIndexGroupID(BaseIndexGroupID, SetIndex):
+    __prefix__ = None
+
+
+class NoPrefixListIndexQueue(BaseIndexQueue, ListIndex):
+    __prefix__ = None
+
+
+@dataclass
+class NoPrefixUserModel(Model, BaseUserModel):
+    __prefix__ = None

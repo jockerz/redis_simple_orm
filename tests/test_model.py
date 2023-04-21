@@ -1,14 +1,35 @@
 from datetime import date
 
+from tests.models.const import REDIS_MODEL_PREFIX
 from .models.redispy import (
     UserModel,
     SingleIndexUsername,
     SingleIndexEmail,
-    SetIndexGroupID
+    SetIndexGroupID,
+    NoPrefixUserModel
 )
 
 
 class TestModelCreate:
+    def test_redis_key(self):
+        # With prefix
+        user = UserModel(
+            user_id=1, username='test', email='test@create.success',
+            group_id=10, birth_date=date.fromisoformat('1999-09-09')
+        )
+        assert user.redis_key.startswith(REDIS_MODEL_PREFIX), \
+            f'key={user.redis_key} prefix={UserModel.__prefix__} ' \
+            f'REDIS_MODEL_PREFIX={REDIS_MODEL_PREFIX}'
+
+        # Without prefix
+        user2 = NoPrefixUserModel(
+            user_id=1, username='test', email='test@create.success',
+            group_id=10, birth_date=date.fromisoformat('1999-09-09')
+        )
+        assert not user2.redis_key.startswith(REDIS_MODEL_PREFIX), \
+            f'key={user2.redis_key} prefix={UserModel.__prefix__} ' \
+            f'REDIS_MODEL_PREFIX={REDIS_MODEL_PREFIX}'
+
     def test_success(self, sync_redis):
         user = UserModel(
             user_id=1,

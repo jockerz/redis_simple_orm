@@ -1,11 +1,16 @@
 from datetime import date
 
+from tests.models.const import REDIS_MODEL_PREFIX
 from .models.redispy import (
     UserModel,
     SingleIndexEmail,
     SingleIndexUsername,
     SetIndexGroupID,
-    ListIndexQueue
+    ListIndexQueue,
+    NoPrefixUserModel,
+    NoPrefixSingleIndexUsername,
+    NoPrefixSetIndexGroupID,
+    NoPrefixListIndexQueue,
 )
 
 
@@ -13,6 +18,22 @@ BIRTH_DATE = date.fromisoformat('1999-09-09')
 
 
 class TestHashIndex:
+    def test_redis_key(self):
+        # With prefix
+        user = UserModel(
+            user_id=1, username='username', email='test@email'
+        )
+        index = SingleIndexUsername.create_from_model_class(user)
+        assert index.redis_key.startswith(REDIS_MODEL_PREFIX)
+
+        # Without prefix
+        user = NoPrefixUserModel(
+            user_id=1, username='username', email='test@email'
+        )
+        index = NoPrefixSingleIndexUsername.create_from_model_class(user)
+        assert not index.redis_key.startswith(REDIS_MODEL_PREFIX)
+
+
     def test_search_model(self, sync_redis):
         user = UserModel(
             user_id=1, username='username', email='test@email'
@@ -59,6 +80,22 @@ class TestHashIndex:
 
 
 class TestListIndex:
+    def test_redis_key(self):
+        # With prefix
+        user = UserModel(
+            user_id=1, username='username', email='test@email'
+        )
+        index = ListIndexQueue.create_from_model_class(user)
+        assert index.redis_key.startswith(REDIS_MODEL_PREFIX)
+
+        # Without prefix
+        user = NoPrefixUserModel(
+            user_id=1, username='username', email='test@email'
+        )
+        index = NoPrefixListIndexQueue.create_from_model_class(user)
+        assert not index.redis_key.startswith(REDIS_MODEL_PREFIX)
+
+
     def test_success(self, sync_redis):
         user = UserModel(
             user_id=1,
@@ -150,6 +187,22 @@ class TestListIndex:
 
 
 class TestSetIndex:
+
+    def test_redis_key(self):
+        # With prefix
+        user = UserModel(
+            user_id=1, username='username', email='test@email'
+        )
+        index = SetIndexGroupID.create_from_model_class(user)
+        assert index.redis_key.startswith(REDIS_MODEL_PREFIX)
+
+        # Without prefix
+        user = NoPrefixUserModel(
+            user_id=1, username='username', email='test@email'
+        )
+        index = NoPrefixSetIndexGroupID.create_from_model_class(user)
+        assert not index.redis_key.startswith(REDIS_MODEL_PREFIX)
+
     def test_search_model(self, sync_redis):
         user = UserModel(
             user_id=1, username='username', group_id=10,

@@ -48,7 +48,6 @@ def tx_redis():
 
     @inlineCallbacks
     def cb(conn):
-        yield conn.ping()
         yield conn.flushdb()
         return conn
     d.addCallback(cb)

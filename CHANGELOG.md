@@ -1,6 +1,9 @@
 # Changelog
 
->> Note: Make sure to edit `version` on `__init__.py`
+
+## 1.2.6
+
+ - allow Model and Index property `__prefix__ = None` value
 
 
 ## 1.2.5

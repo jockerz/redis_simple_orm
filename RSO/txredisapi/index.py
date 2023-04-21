@@ -11,8 +11,14 @@ T = TypeVar('T')
 class HashIndex(BaseIndex):
     @classmethod
     def _to_redis_key(cls) -> str:
-        return f'{cls.__prefix__}::{cls.__model__.__model_name__}::'\
-               f'{cls.__index_name__}::{cls.__key__}'
+        model_prefix = cls.__model__.__model_name__
+        if cls.__prefix__ is not None:
+            redis_key = f'{cls.__prefix__}::'
+        else:
+            redis_key = ''
+        redis_key = f'{redis_key}{model_prefix}::' \
+                    f'{cls.__index_name__}::{cls.__key__}'
+        return redis_key
 
     @property
     def redis_key(self) -> str:
@@ -60,9 +66,13 @@ class ListIndex(BaseIndex):
     @classmethod
     def _to_redis_key(cls, value):
         model_prefix = cls.__model__.__model_name__
-        first_part = f'{cls.__prefix__}::{model_prefix}::'\
-                     f'{cls.__index_name__}::{cls.__key__}'
-        return f'{first_part}:{value}'
+        if cls.__prefix__ is not None:
+            redis_key = f'{cls.__prefix__}::'
+        else:
+            redis_key = ''
+        redis_key = f'{redis_key}{model_prefix}::' \
+                    f'{cls.__index_name__}::{cls.__key__}:{value}'
+        return redis_key
 
     @property
     def redis_key(self):
@@ -152,9 +162,14 @@ class SetIndex(BaseIndex):
 
     @classmethod
     def _to_redis_key(cls, value):
-        first_part = f'{cls.__prefix__}::{cls.__model__.__model_name__}::'\
-                     f'{cls.__index_name__}::{cls.__key__}'
-        return f'{first_part}:{value}'
+        model_prefix = cls.__model__.__model_name__
+        if cls.__prefix__ is not None:
+            redis_key = f'{cls.__prefix__}::'
+        else:
+            redis_key = ''
+        redis_key = f'{redis_key}{model_prefix}::' \
+                    f'{cls.__index_name__}::{cls.__key__}:{value}'
+        return redis_key
 
     @property
     def redis_key(self):
@@ -167,7 +182,7 @@ class SetIndex(BaseIndex):
             redis.sadd(self.redis_key, self._model_key_value)
             returnValue(None)
         else:
-            yield redis.sadd(self.redis_key, self._model_key_value)
+            yield redis.sadd(self.redis_key, members=self._model_key_value)
 
     @classmethod
     @inlineCallbacks
@@ -196,4 +211,4 @@ class SetIndex(BaseIndex):
 
     @inlineCallbacks
     def remove_from_index(self, redis: Union[BaseRedisProtocol, ConnectionHandler]):
-        yield redis.srem(self.redis_key, self._model_key_value)
+        yield redis.srem(self.redis_key, members=self._model_key_value)
