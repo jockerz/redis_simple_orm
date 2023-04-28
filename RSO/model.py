@@ -22,7 +22,9 @@ class Model(BaseModel):
                 continue
             index = index_class.create_from_model_class(self)
             index.save_index(pipe)
-        pipe.execute()
+
+        if not isinstance(redis, Pipeline):
+            pipe.execute()
 
     @classmethod
     def search(cls, redis: Redis, value):

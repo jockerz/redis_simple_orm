@@ -1,3 +1,5 @@
+import os
+
 import pytest
 import pytest_twisted
 
@@ -7,8 +9,8 @@ from redis import Redis as SyncRedis
 from redis.asyncio import Redis as AsyncRedis
 from twisted.internet.defer import inlineCallbacks
 
-REDIS_DB = 15
-REDIS_PASS = 'RedisPassword'
+REDIS_DB = int(os.getenv('REDIS_TEST_DB', 14))
+REDIS_PASS = os.getenv('REDIS_TEST_PASS', 'RedisPassword')
 
 
 @pytest.fixture

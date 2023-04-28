@@ -1,6 +1,11 @@
 # Changelog
 
 
+## 1.2.7
+
+ - Do not execute pipeline on `Model.save` if `redis` argument is instance of Pipeline
+
+
 ## 1.2.6
 
  - allow Model and Index property `__prefix__ = None` value

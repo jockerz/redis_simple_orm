@@ -3,11 +3,12 @@
 # Redis Simple ORM
 
 Redis ORM in Simple Way.
-If you find this module is too simple, please take a look on [walrus](https://walrus.readthedocs.org).
 
-> __NOTE__: Please be aware, that this module is way too simple.
-> Your data will likely will be replaced without warning.
-> Do not use for your main data storage.
+As an inspiration and a very good alternative, 
+please take a look on [walrus](https://walrus.readthedocs.org).
+
+> __NOTE__: Please be aware, Your data might be replaced without warning.
+
 
 ## Suggestion for this Module Usage
 
@@ -186,7 +187,7 @@ main()
 ```
 
 
-## Usage Example (`asyncio` version)
+## Usage Example (`asyncio` version, also works with `aioredis`)
 
 ### Model
 
@@ -195,6 +196,8 @@ main()
 from dataclasses import dataclass, field
 
 from aioredis import Redis
+# Alternative
+# from redis.asyncio import Redis
 from RSO.aioredis.index import (
 	HashIndex as AsyncHashIndex, 
 	SetIndex as AsyncSetIndex
@@ -242,12 +245,12 @@ class AsyncUserModel(AsyncModel):
     group_id: int = field(default=None)
 
     def to_redis(self):
-    	result = {}
-    	for key, value in self.dict().items():
-    		if value is None:
-    			continue
-    		result[key] = value
-    	return result
+        result = {}
+        for key, value in self.dict().items():
+            if value is None:
+                continue
+            result[key] = value
+        return result
 
 
     """For easier access, we create some searching method"""
@@ -457,5 +460,4 @@ if __name__ == "__main__":
         .addCallback(lambda ign: reactor.stop())\
         .addErrback(lambda ign: reactor.stop())
     reactor.run()
-
 ```

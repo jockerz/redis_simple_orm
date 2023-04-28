@@ -8,7 +8,7 @@ try:
     from aioredis.client import Redis, Pipeline
 except ModuleNotFoundError:
     from aioredis.commands import Redis, Pipeline
-
+from redis.asyncio.client import Redis as Redis2, Pipeline as Pipeline2
 from RSO.base import BaseModel
 from .index import ListIndex
 
@@ -34,7 +34,7 @@ class Model(BaseModel):
         return dict_data
 
     async def save(self, redis: Union[Pipeline, Redis]):
-        if isinstance(redis, Pipeline):
+        if isinstance(redis, (Pipeline, Pipeline2)):
             pipe = redis
         else:
             pipe = redis.pipeline()
@@ -49,7 +49,9 @@ class Model(BaseModel):
             if getattr(self, index_class.__key__, None) is None:
                 continue
             await index.save_index(pipe)
-        await pipe.execute()
+
+        if not isinstance(redis, (Pipeline, Pipeline2)):
+            await pipe.execute()
 
     async def extended_save(self, redis: Union[Pipeline, Redis]):
         """
