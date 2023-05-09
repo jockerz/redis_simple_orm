@@ -3,27 +3,12 @@ from typing import Any, Union, Type, TypeVar
 from txredisapi import BaseRedisProtocol, ConnectionHandler
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from RSO.base import BaseIndex, BaseModel
+from RSO.base import BaseModel, BaseHashIndex, BaseListIndex, BaseSetIndex
 
 T = TypeVar('T')
 
 
-class HashIndex(BaseIndex):
-    @classmethod
-    def _to_redis_key(cls) -> str:
-        model_prefix = cls.__model__.__model_name__
-        if cls.__prefix__ is not None:
-            redis_key = f'{cls.__prefix__}::'
-        else:
-            redis_key = ''
-        redis_key = f'{redis_key}{model_prefix}::' \
-                    f'{cls.__index_name__}::{cls.__key__}'
-        return redis_key
-
-    @property
-    def redis_key(self) -> str:
-        return self._to_redis_key()
-
+class HashIndex(BaseHashIndex):
     @inlineCallbacks
     def save_index(self, redis: Union[BaseRedisProtocol, ConnectionHandler]):
         index_value = getattr(self.__model__, self.__key__)
@@ -61,24 +46,7 @@ class HashIndex(BaseIndex):
         yield redis.hdel(self.redis_key, index_value)
 
 
-class ListIndex(BaseIndex):
-
-    @classmethod
-    def _to_redis_key(cls, value):
-        model_prefix = cls.__model__.__model_name__
-        if cls.__prefix__ is not None:
-            redis_key = f'{cls.__prefix__}::'
-        else:
-            redis_key = ''
-        redis_key = f'{redis_key}{model_prefix}::' \
-                    f'{cls.__index_name__}::{cls.__key__}:{value}'
-        return redis_key
-
-    @property
-    def redis_key(self):
-        value = getattr(self.__model__, self.__key__)
-        return self._to_redis_key(value)
-
+class ListIndex(BaseListIndex):
     @inlineCallbacks
     def save_index(self, redis: Union[BaseRedisProtocol, ConnectionHandler]):
         if isinstance(redis, BaseRedisProtocol):
@@ -158,24 +126,7 @@ class ListIndex(BaseIndex):
             returnValue(result)
 
 
-class SetIndex(BaseIndex):
-
-    @classmethod
-    def _to_redis_key(cls, value):
-        model_prefix = cls.__model__.__model_name__
-        if cls.__prefix__ is not None:
-            redis_key = f'{cls.__prefix__}::'
-        else:
-            redis_key = ''
-        redis_key = f'{redis_key}{model_prefix}::' \
-                    f'{cls.__index_name__}::{cls.__key__}:{value}'
-        return redis_key
-
-    @property
-    def redis_key(self):
-        value = getattr(self.__model__, self.__key__)
-        return self._to_redis_key(value)
-
+class SetIndex(BaseSetIndex):
     @inlineCallbacks
     def save_index(self, redis: Union[BaseRedisProtocol, ConnectionHandler]):
         if isinstance(redis, BaseRedisProtocol):

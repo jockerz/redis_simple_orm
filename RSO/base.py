@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from dataclasses import asdict, fields
-from typing import List, Type, TypeVar
+from typing import Any, List, Type, TypeVar
 from uuid import UUID
 
 T = TypeVar('T')
@@ -28,6 +28,61 @@ class BaseIndex:
     def create_from_model_class(cls, model_instance: Type["BaseModel"]):
         cls.__model__ = model_instance
         return cls()
+
+
+class BaseHashIndex(BaseIndex):
+    @classmethod
+    def _to_redis_key(cls) -> str:
+        model_prefix = cls.__model__.__model_name__
+        if cls.__prefix__ is not None:
+            redis_key = f'{cls.__prefix__}::'
+        else:
+            redis_key = ''
+        redis_key = f'{redis_key}{model_prefix}::' \
+                    f'{cls.__index_name__}::{cls.__key__}'
+        return redis_key
+
+    @property
+    def redis_key(self) -> str:
+        return self._to_redis_key()
+
+
+class BaseListIndex(BaseIndex):
+    @classmethod
+    def _to_redis_key(cls, value) -> str:
+        model_prefix = cls.__model__.__model_name__
+        if cls.__prefix__ is not None:
+            redis_key = f'{cls.__prefix__}::'
+        else:
+            redis_key = ''
+        redis_key = f'{redis_key}{model_prefix}::' \
+                    f'{cls.__index_name__}::{cls.__key__}:{value}'
+        return redis_key
+
+    @property
+    def redis_key(self) -> str:
+        value = getattr(self.__model__, self.__key__)
+        return self._to_redis_key(value)
+
+
+class BaseSetIndex(BaseIndex):
+
+    @classmethod
+    def _to_redis_key(cls, value: Any) -> str:
+        model_prefix = cls.__model__.__model_name__
+        if cls.__prefix__ is not None:
+            redis_key = f'{cls.__prefix__}::'
+        else:
+            redis_key = ''
+        redis_key = f'{redis_key}{model_prefix}::' \
+                    f'{cls.__index_name__}::{cls.__key__}:{value}'
+        return redis_key
+
+    @property
+    def redis_key(self) -> str:
+        value = getattr(self.__model__, self.__key__)
+        return self._to_redis_key(value)
+
 
 
 class BaseModel:

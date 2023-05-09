@@ -2,27 +2,12 @@ from typing import Any, List, Optional, Type, TypeVar, Union
 
 from redis.client import Pipeline, Redis
 
-from .base import BaseIndex, BaseModel
+from .base import BaseModel, BaseHashIndex, BaseListIndex, BaseSetIndex
 
 T = TypeVar('T')
 
 
-class HashIndex(BaseIndex):
-    @classmethod
-    def _to_redis_key(cls) -> str:
-        model_prefix = cls.__model__.__model_name__
-        if cls.__prefix__ is not None:
-            redis_key = f'{cls.__prefix__}::'
-        else:
-            redis_key = ''
-        redis_key = f'{redis_key}{model_prefix}::' \
-                    f'{cls.__index_name__}::{cls.__key__}'
-        return redis_key
-
-    @property
-    def redis_key(self) -> str:
-        return self._to_redis_key()
-
+class HashIndex(BaseHashIndex):
     def save_index(self, redis: Union[Pipeline, Redis]) -> None:
         index_value = getattr(self.__model__, self.__key__)
         redis.hset(self.redis_key, index_value, self._model_key_value)
@@ -46,23 +31,7 @@ class HashIndex(BaseIndex):
         redis.hdel(self.redis_key, index_value)
 
 
-class ListIndex(BaseIndex):
-    @classmethod
-    def _to_redis_key(cls, value) -> str:
-        model_prefix = cls.__model__.__model_name__
-        if cls.__prefix__ is not None:
-            redis_key = f'{cls.__prefix__}::'
-        else:
-            redis_key = ''
-        redis_key = f'{redis_key}{model_prefix}::' \
-                    f'{cls.__index_name__}::{cls.__key__}:{value}'
-        return redis_key
-
-    @property
-    def redis_key(self) -> str:
-        value = getattr(self.__model__, self.__key__)
-        return self._to_redis_key(value)
-
+class ListIndex(BaseListIndex):
     def save_index(self, redis: Union[Pipeline, Redis]) -> None:
         redis.lpush(self.redis_key, self._model_key_value)
 
@@ -119,24 +88,7 @@ class ListIndex(BaseIndex):
         redis.lrem(self.redis_key, count, self._model_key_value)
 
 
-class SetIndex(BaseIndex):
-
-    @classmethod
-    def _to_redis_key(cls, value: Any) -> str:
-        model_prefix = cls.__model__.__model_name__
-        if cls.__prefix__ is not None:
-            redis_key = f'{cls.__prefix__}::'
-        else:
-            redis_key = ''
-        redis_key = f'{redis_key}{model_prefix}::' \
-                    f'{cls.__index_name__}::{cls.__key__}:{value}'
-        return redis_key
-
-    @property
-    def redis_key(self) -> str:
-        value = getattr(self.__model__, self.__key__)
-        return self._to_redis_key(value)
-
+class SetIndex(BaseSetIndex):
     def save_index(self, redis: Union[Pipeline, Redis]) -> None:
         redis.sadd(self.redis_key, self._model_key_value)
 

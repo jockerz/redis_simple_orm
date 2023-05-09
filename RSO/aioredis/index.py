@@ -9,7 +9,7 @@ except ModuleNotFoundError:
     from aioredis.commands import Redis, Pipeline
     from aioredis.errors import ReplyError as ResponseError
 
-from RSO.base import BaseIndex, BaseModel
+from RSO.base import BaseModel, BaseHashIndex, BaseListIndex, BaseSetIndex
 
 
 old_aioredis = aioredis_version < '2.0.0'
@@ -17,25 +17,7 @@ old_aioredis = aioredis_version < '2.0.0'
 T = TypeVar('T')
 
 
-class HashIndex(BaseIndex):
-
-    @classmethod
-    def _to_redis_key(cls):
-        model_prefix = cls.__model__.__model_name__
-        if cls.__prefix__ is not None:
-            redis_key = f'{cls.__prefix__}::'
-        else:
-            redis_key = ''
-        redis_key = f'{redis_key}{model_prefix}::' \
-                    f'{cls.__index_name__}::{cls.__key__}'
-        return redis_key
-
-    @property
-    def redis_key(self):
-        model_prefix = self.__model__.__model_name__
-        return f'{self.__prefix__}::{model_prefix}::{self.__index_name__}::'\
-               f'{self.__key__}'
-
+class HashIndex(BaseHashIndex):
     async def save_index(self, redis: Pipeline):
         index_value = getattr(self.__model__, self.__key__)
         if old_aioredis:
@@ -66,24 +48,7 @@ class HashIndex(BaseIndex):
         redis.hdel(self.redis_key, index_value)
 
 
-class ListIndex(BaseIndex):
-
-    @classmethod
-    def _to_redis_key(cls, value):
-        model_prefix = cls.__model__.__model_name__
-        if cls.__prefix__ is not None:
-            redis_key = f'{cls.__prefix__}::'
-        else:
-            redis_key = ''
-        redis_key = f'{redis_key}{model_prefix}::' \
-                    f'{cls.__index_name__}::{cls.__key__}:{value}'
-        return redis_key
-
-    @property
-    def redis_key(self):
-        value = getattr(self.__model__, self.__key__)
-        return self._to_redis_key(value)
-
+class ListIndex(BaseListIndex):
     async def save_index(self, redis: Pipeline):
         redis.lpush(self.redis_key, self._model_key_value)
 
@@ -144,24 +109,7 @@ class ListIndex(BaseIndex):
             return await model_class.search(redis, model_value)
 
 
-class SetIndex(BaseIndex):
-
-    @classmethod
-    def _to_redis_key(cls, value):
-        model_prefix = cls.__model__.__model_name__
-        if cls.__prefix__ is not None:
-            redis_key = f'{cls.__prefix__}::'
-        else:
-            redis_key = ''
-        redis_key = f'{redis_key}{model_prefix}::' \
-                    f'{cls.__index_name__}::{cls.__key__}:{value}'
-        return redis_key
-
-    @property
-    def redis_key(self):
-        value = getattr(self.__model__, self.__key__)
-        return self._to_redis_key(value)
-
+class SetIndex(BaseSetIndex):
     async def save_index(self, redis: Pipeline):
         redis.sadd(self.redis_key, self._model_key_value)
 
