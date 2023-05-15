@@ -5,72 +5,61 @@ from fakeredis import FakeRedis as Redis, aioredis
 
 from RSO.index import HashIndex, SetIndex
 from RSO.model import Model
-from RSO.aioredis.index import (
+from RSO.asyncio.index import (
     HashIndex as AsyncHashIndex,
     SetIndex as AsyncSetIndex
 )
-from RSO.aioredis.model import Model as AsyncModel
+from RSO.asyncio.model import Model as AsyncModel
 
+from tests.models.base import BaseUserModel
 from tests.models.const import REDIS_MODEL_PREFIX
 from .data import USERS
 
 
-class SingleIndexUsername(HashIndex):
-    __prefix__ = REDIS_MODEL_PREFIX
-    __model__ = 'IndexUsername'
-    __key__ = 'username'
-
-
-class SingleIndexEmail(HashIndex):
-    __prefix__ = REDIS_MODEL_PREFIX
-    __model__ = 'IndexEmail'
-    __key__ = 'email'
-
-
-class SetIndexGroupID(SetIndex):
-    __prefix__ = REDIS_MODEL_PREFIX
-    __model__ = 'IndexGroupID'
-    __key__ = 'group_id'
-
-
 @dataclass
-class UserModel(Model):
+class UserModel(Model, BaseUserModel):
     __prefix__ = REDIS_MODEL_PREFIX
     __model_name__ = 'user'
     __key__ = 'user_id'
-    __indexes__ = [
-        SingleIndexUsername,
-        SingleIndexEmail,
-        SetIndexGroupID
-    ]
-
-    user_id: int
-    username: str
-    email: str = field(default=None)
-    group_id: int = field(default=None)
-
-    def to_redis(self):
-        result = {}
-        for key, value in self.dict().items():
-            # email and group_id might be None
-            if value is None:
-                continue
-            result[key] = value
-        return result
 
     """For easier access, we create some searching method"""
 
     @classmethod
     def search_by_username(cls, redis: Redis, username: str):
-        return SingleIndexUsername.search_model(redis, username, cls)
+        return SingleIndexUsername.search_model(redis, username)
 
     @classmethod
     def search_by_email(cls, redis: Redis, email: str):
-        return SingleIndexEmail.search_model(redis, email, cls)
+        return SingleIndexEmail.search_model(redis, email)
 
     @classmethod
     def search_group_member(cls, redis: Redis, group_id: int):
-        return SetIndexGroupID.search_models(redis, group_id, cls)
+        return SetIndexGroupID.search_models(redis, group_id)
+
+
+class SingleIndexUsername(HashIndex):
+    __prefix__ = REDIS_MODEL_PREFIX
+    __model__ = UserModel
+    __key__ = 'username'
+
+
+class SingleIndexEmail(HashIndex):
+    __prefix__ = REDIS_MODEL_PREFIX
+    __model__ = UserModel
+    __key__ = 'email'
+
+
+class SetIndexGroupID(SetIndex):
+    __prefix__ = REDIS_MODEL_PREFIX
+    __model__ = UserModel
+    __key__ = 'group_id'
+
+
+UserModel.__indexes__ = [
+    SingleIndexUsername,
+    SingleIndexEmail,
+    SetIndexGroupID
+]
 
 
 def test_main_sync(sync_redis):
@@ -111,62 +100,48 @@ def test_main_sync(sync_redis):
 
 # Async
 
-
-class AsyncSingleIndexUsername(AsyncHashIndex):
-    __prefix__ = REDIS_MODEL_PREFIX
-    __model__ = 'IndexUsername'
-    __key__ = 'username'
-
-
-class AsyncSingleIndexEmail(AsyncHashIndex):
-    __prefix__ = REDIS_MODEL_PREFIX
-    __model__ = 'IndexEmail'
-    __key__ = 'email'
-
-
-class AsyncSetIndexGroupID(AsyncSetIndex):
-    __prefix__ = REDIS_MODEL_PREFIX
-    __model__ = 'IndexGroupID'
-    __key__ = 'group_id'
-
-
 @dataclass
-class AsyncUserModel(AsyncModel):
+class AsyncUserModel(AsyncModel, BaseUserModel):
     __prefix__ = REDIS_MODEL_PREFIX
-    __model_name__ = 'user'
-    __key__ = 'user_id'
-    __indexes__ = [
-        AsyncSingleIndexUsername,
-        AsyncSingleIndexEmail,
-        AsyncSetIndexGroupID
-    ]
-
-    user_id: int
-    username: str
-    email: str = field(default=None)
-    group_id: int = field(default=None)
-
-    def to_redis(self):
-        result = {}
-        for key, value in self.dict().items():
-            if value is None:
-                continue
-            result[key] = value
-        return result
 
     """For easier access, we create some searching method"""
 
     @classmethod
     async def search_by_username(cls, redis: Redis, username: str):
-        return await AsyncSingleIndexUsername.search_model(redis, username, cls)
+        return await AsyncSingleIndexUsername.search_model(redis, username)
 
     @classmethod
     async def search_by_email(cls, redis: Redis, email: str):
-        return await AsyncSingleIndexEmail.search_model(redis, email, cls)
+        return await AsyncSingleIndexEmail.search_model(redis, email)
 
     @classmethod
     async def search_group_member(cls, redis: Redis, group_id: int):
-        return await AsyncSetIndexGroupID.search_models(redis, group_id, cls)
+        return await AsyncSetIndexGroupID.search_models(redis, group_id)
+
+
+class AsyncSingleIndexUsername(AsyncHashIndex):
+    __prefix__ = REDIS_MODEL_PREFIX
+    __model__ = AsyncUserModel
+    __key__ = 'username'
+
+
+class AsyncSingleIndexEmail(AsyncHashIndex):
+    __prefix__ = REDIS_MODEL_PREFIX
+    __model__ = AsyncUserModel
+    __key__ = 'email'
+
+
+class AsyncSetIndexGroupID(AsyncSetIndex):
+    __prefix__ = REDIS_MODEL_PREFIX
+    __model__ = AsyncUserModel
+    __key__ = 'group_id'
+
+
+AsyncUserModel.__indexes__ = [
+    AsyncSingleIndexUsername,
+    AsyncSingleIndexEmail,
+    AsyncSetIndexGroupID
+]
 
 
 @pytest.mark.asyncio

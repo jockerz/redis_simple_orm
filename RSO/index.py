@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Type, TypeVar, Union
+from typing import Any, List, Optional, TypeVar, Union
 
 from redis.client import Pipeline, Redis
 
@@ -8,109 +8,128 @@ T = TypeVar('T')
 
 
 class HashIndex(BaseHashIndex):
-    def save_index(self, redis: Union[Pipeline, Redis]) -> None:
-        index_value = getattr(self.__model__, self.__key__)
-        redis.hset(self.redis_key, index_value, self._model_key_value)
+    @classmethod
+    def save(
+        cls, redis: Union[Pipeline, Redis], model_obj: T
+    ) -> None:
+        redis.hset(
+            cls.redis_key(),
+            cls.index_key_value(model_obj),
+            cls.model_key_value(model_obj)
+        )
 
     @classmethod
-    def search_model(
-        cls, redis: Redis, index_value, model_class: Type[BaseModel]
-    ) -> Optional[BaseModel]:
-        setattr(cls, '__model__', model_class)
-        redis_key = cls._to_redis_key()
-        if not redis.exists(redis_key):
+    def remove(
+        cls, redis: Union[Pipeline, Redis], model_obj: T
+    ) -> None:
+        redis.hdel(cls.redis_key(), cls.index_key_value(model_obj))
+
+    @classmethod
+    def search_model(cls, redis: Redis, index_value) -> Optional[BaseModel]:
+        redis_key = cls.redis_key()
+        if bool(not redis.exists(redis_key)):
             return
 
-        model_primary_value = redis.hmget(redis_key, index_value)
-        if isinstance(model_primary_value, list):
-            model_primary_value = model_primary_value[0]
-        return model_class.search(redis, model_primary_value)
-
-    def remove_from_index(self, redis: Union[Pipeline, Redis]):
-        index_value = getattr(self.__model__, self.__key__)
-        redis.hdel(self.redis_key, index_value)
+        model_key_value = redis.hmget(redis_key, index_value)
+        if isinstance(model_key_value, list):
+            model_key_value = model_key_value[0]
+        return cls.__model__.search(redis, model_key_value)
 
 
 class ListIndex(BaseListIndex):
-    def save_index(self, redis: Union[Pipeline, Redis]) -> None:
-        redis.lpush(self.redis_key, self._model_key_value)
-
-    def remove_from_list(
-        self, redis: Union[Pipeline, Redis], model_value: Any,
-        count: int = 1
+    @classmethod
+    def save(
+        cls, redis: Union[Pipeline, Redis], model_obj: T
     ) -> None:
-        """
-        count = 0 to delete all
-        """
-        redis.lrem(self.redis_key, count, model_value)
+        redis.lpush(
+            cls.redis_key(model_obj),
+            cls.model_key_value(model_obj)
+        )
+
+    @classmethod
+    def remove(cls, redis: Redis, model_obj: T, count: int = 1) -> None:
+        """count = 0 to remove all"""
+        redis.lrem(
+            cls.redis_key(model_obj),
+            count,
+            cls.model_key_value(model_obj)
+        )
 
     @classmethod
     def get_members(
         cls, redis: Union[Pipeline, Redis], index_value: Any
     ) -> List[Any]:
-        return redis.lrange(cls._to_redis_key(index_value), 0, -1)
+        return redis.lrange(cls.redis_key_from_value(index_value), 0, -1)
 
     @classmethod
-    def search_models(
-        cls, redis: Redis, index_value: Any, model_class: T
-    ) -> List[BaseModel]:
-        setattr(cls, '__model__', model_class)
-        redis_key = cls._to_redis_key(index_value)
+    def search_models(cls, redis: Redis, index_value: Any) -> List[BaseModel]:
+        redis_key = cls.redis_key_from_value(index_value)
         if not redis.exists(redis_key):
             return []
 
         instance_list = []
         for value in cls.get_members(redis, index_value):
-            instance = model_class.search(redis, value)
+            instance = cls.__model__.search(redis, value)
             instance_list.append(instance)
         return instance_list
 
-    def is_exist_on_list(self, redis: Redis, model_value: Any) -> bool:
-        result = redis.execute_command('LPOS', self.redis_key, model_value)
+    @classmethod
+    def has_member(cls, redis: Redis, model_obj: T) -> bool:
+        return cls.has_member_value(
+            redis,
+            getattr(model_obj, cls.__key__),
+            getattr(model_obj, model_obj.__key__)
+        )
+
+    @classmethod
+    def has_member_value(
+        cls, redis: Redis, index_value: Any, model_value: Any
+    ) -> bool:
+        result = redis.lpos(
+            cls.redis_key_from_value(index_value),
+            model_value
+        )
         return result is not None
 
     @classmethod
     def get_by_rpoplpush(
-        cls, redis: Redis, index_value: Any, model_class: Type[BaseModel]
+        cls, redis: Redis, index_value: Any
     ) -> Optional[BaseModel]:
-        cls.__model__ = model_class
-        redis_key = cls._to_redis_key(index_value)
+        redis_key = cls.redis_key_from_value(index_value)
         if redis.exists(redis_key) == 0:
             return None
         else:
             value = redis.rpoplpush(redis_key, redis_key)
-            return model_class.search(redis, value)
-
-    def remove_from_index(self, redis: Redis, count: int = 1) -> None:
-        """
-        count = 0 to remove all
-        """
-        redis.lrem(self.redis_key, count, self._model_key_value)
+            return cls.__model__.search(redis, value)
 
 
 class SetIndex(BaseSetIndex):
-    def save_index(self, redis: Union[Pipeline, Redis]) -> None:
-        redis.sadd(self.redis_key, self._model_key_value)
+    @classmethod
+    def save(
+        cls, redis: Union[Pipeline, Redis], model_obj: T
+    ) -> None:
+        redis.sadd(
+            cls.redis_key(model_obj),
+            cls.model_key_value(model_obj)
+        )
+
+    @classmethod
+    def remove(cls, redis: Union[Pipeline, Redis], model_obj: T):
+        redis.srem(cls.redis_key(model_obj), cls.model_key_value(model_obj))
 
     @classmethod
     def get_members(cls, redis: Redis, index_value) -> List[Any]:
-        redis_key = cls._to_redis_key(index_value)
+        redis_key = cls.redis_key_from_value(index_value)
         return redis.smembers(redis_key)
 
     @classmethod
-    def search_models(
-        cls, redis: Redis, index_value, model_class: Type[BaseModel]
-    ) -> List[BaseModel]:
-        setattr(cls, '__model__', model_class)
-        redis_key = cls._to_redis_key(index_value)
+    def search_models(cls, redis: Redis, index_value) -> List[BaseModel]:
+        redis_key = cls.redis_key_from_value(index_value)
         if not redis.exists(redis_key):
             return []
 
         model_instances = []
         for value in redis.smembers(redis_key):
-            model_instance = model_class.search(redis, value)
+            model_instance = cls.__model__.search(redis, value)
             model_instances.append(model_instance)
         return model_instances
-
-    def remove_from_index(self, redis: Union[Pipeline, Redis]):
-        redis.srem(self.redis_key, self._model_key_value)

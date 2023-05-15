@@ -1,4 +1,4 @@
-from typing import Any, Union, Type, TypeVar
+from typing import Any, List, Optional, Union, TypeVar
 
 from txredisapi import BaseRedisProtocol, ConnectionHandler
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -9,146 +9,185 @@ T = TypeVar('T')
 
 
 class HashIndex(BaseHashIndex):
+    @classmethod
     @inlineCallbacks
-    def save_index(self, redis: Union[BaseRedisProtocol, ConnectionHandler]):
-        index_value = getattr(self.__model__, self.__key__)
+    def save(
+        cls, redis: Union[BaseRedisProtocol, ConnectionHandler], model_obj: T
+    ):
+        index_value = cls.index_key_value(model_obj)
         if isinstance(redis, BaseRedisProtocol):
             redis.hmset(
-                self.redis_key, {index_value: self._model_key_value}
+                cls.redis_key(),
+                {index_value: cls.model_key_value(model_obj)}
             )
             returnValue(None)
         else:
             yield redis.hmset(
-                self.redis_key, {index_value: self._model_key_value}
+                cls.redis_key(),
+                {index_value: cls.model_key_value(model_obj)}
             )
 
     @classmethod
     @inlineCallbacks
-    def search_model(
-        cls, redis: ConnectionHandler, index_value, model_class: Type[BaseModel]
+    def remove(
+        cls, redis: Union[BaseRedisProtocol, ConnectionHandler], model_obj: T
     ):
-        setattr(cls, '__model__', model_class)
-        redis_key = cls._to_redis_key()
+        yield redis.hdel(
+            cls.redis_key(),
+            cls.index_key_value(model_obj)
+        )
+
+    @classmethod
+    @inlineCallbacks
+    def search_model(cls, redis: ConnectionHandler, index_value):
+        redis_key = cls.redis_key()
         is_exist = yield redis.exists(redis_key)
         if not is_exist:
             return
         model_primary_value = yield redis.hget(redis_key, index_value)
         if model_primary_value is None:
             return
-        result = yield model_class.search(redis, model_primary_value)
+        result = yield cls.__model__.search(redis, model_primary_value)
         returnValue(result)
-
-    @inlineCallbacks
-    def remove_from_index(
-        self, redis: Union[BaseRedisProtocol, ConnectionHandler]
-    ):
-        index_value = getattr(self.__model__, self.__key__)
-        yield redis.hdel(self.redis_key, index_value)
 
 
 class ListIndex(BaseListIndex):
+    @classmethod
     @inlineCallbacks
-    def save_index(self, redis: Union[BaseRedisProtocol, ConnectionHandler]):
+    def save(
+        cls, redis: Union[BaseRedisProtocol, ConnectionHandler], model_obj: T
+    ):
         if isinstance(redis, BaseRedisProtocol):
-            redis.lpush(self.redis_key, self._model_key_value)
+            redis.lpush(
+                cls.redis_key(model_obj),
+                cls.model_key_value(model_obj)
+            )
             returnValue(None)
         else:
-            yield redis.lpush(self.redis_key, self._model_key_value)
+            yield redis.lpush(
+                cls.redis_key(model_obj),
+                cls.model_key_value(model_obj)
+            )
 
     @classmethod
     @inlineCallbacks
-    def get_members(cls, redis: ConnectionHandler, index_value: Any):
-        redis_key = cls._to_redis_key(index_value)
-        result = yield redis.lrange(redis_key, 0, -1)
-        return result
-
-    @inlineCallbacks
-    def is_exist_on_list(
-        self, redis: ConnectionHandler, model_value: BaseModel
+    def remove(
+        cls, redis: Union[BaseRedisProtocol, ConnectionHandler],
+        model_obj: T, count: int = 1
     ):
-        result = yield redis.execute_command(
-            "LPOS", self.redis_key, model_value
+        """
+        count = 0 to remove all
+        """
+        yield redis.lrem(
+            cls.redis_key(model_obj),
+            count,
+            cls.model_key_value(model_obj)
         )
-        return result is not None
-
-    @inlineCallbacks
-    def remove_from_list(
-        self, redis: Union[BaseRedisProtocol, ConnectionHandler],
-        model_value: Any, count: int = 1
-    ):
-        """
-        count = 0 to delete all
-        """
-        if isinstance(redis, ConnectionHandler):
-            yield redis.lrem(self.redis_key, count, model_value)
-        else:
-            redis.lrem(self.redis_key, count, model_value)
 
     @classmethod
     @inlineCallbacks
     def search_models(
-        cls, redis: ConnectionHandler, index_value, model_class: T
-    ):
-        setattr(cls, '__model__', model_class)
-        redis_key = cls._to_redis_key(index_value)
+        cls, redis: ConnectionHandler, index_value: Any
+    ) -> List[BaseModel]:
+        redis_key = cls.redis_key_from_value(index_value)
         result = yield redis.exists(redis_key)
         if not result:
             return []
 
         model_instances = []
-        result = yield redis.lrange(redis_key, 0, -1)
+        result = yield cls.get_members(redis, index_value)
         for value in result:
-            model_instance = yield model_class.search(redis, value)
+            model_instance = yield cls.__model__.search(redis, value)
             model_instances.append(model_instance)
         return model_instances
 
+    @classmethod
     @inlineCallbacks
-    def remove_from_index(
-        self, redis: Union[BaseRedisProtocol, ConnectionHandler],
-        count: int = 1
-    ):
-        """
-        count = 0 to remove all
-        """
-        yield redis.lrem(self.redis_key, count, self._model_key_value)
+    def get_members(
+        cls, redis: ConnectionHandler, index_value: Any
+    ) -> List[Any]:
+        redis_key = cls.redis_key_from_value(index_value)
+        result = yield redis.lrange(redis_key, 0, -1)
+        return result
 
     @classmethod
     @inlineCallbacks
-    def get_by_rpoplpush(cls, redis, index_value, model_class: Type[BaseModel]):
-        cls.__model__ = model_class
-        redis_key = cls._to_redis_key(index_value)
+    def has_member(cls, redis: ConnectionHandler, model_obj: T) -> bool:
+        result = yield cls.has_member_value(
+            redis,
+            getattr(model_obj, cls.__key__),
+            getattr(model_obj, model_obj.__key__)
+        )
+        return result
+
+    @classmethod
+    @inlineCallbacks
+    def has_member_value(
+        cls, redis: ConnectionHandler, index_value: Any, model_value: Any
+    ) -> bool:
+        result = yield redis.execute_command(
+            'LPOS',
+            cls.redis_key_from_value(index_value),
+            model_value
+        )
+        return result is not None
+
+    @classmethod
+    @inlineCallbacks
+    def get_by_rpoplpush(cls, redis, index_value) -> Optional[BaseModel]:
+        redis_key = cls.redis_key_from_value(index_value)
         result = yield redis.exists(redis_key)
         if not result:
             returnValue(None)
         else:
             value = yield redis.rpoplpush(redis_key, redis_key)
-            result = yield model_class.search(redis, value)
+            result = yield cls.__model__.search(redis, value)
             returnValue(result)
 
 
 class SetIndex(BaseSetIndex):
+    @classmethod
     @inlineCallbacks
-    def save_index(self, redis: Union[BaseRedisProtocol, ConnectionHandler]):
+    def save(
+        cls, redis: Union[BaseRedisProtocol, ConnectionHandler], model_obj: T
+    ):
         if isinstance(redis, BaseRedisProtocol):
-            redis.sadd(self.redis_key, self._model_key_value)
+            redis.sadd(
+                cls.redis_key(model_obj),
+                cls.model_key_value(model_obj)
+            )
             returnValue(None)
         else:
-            yield redis.sadd(self.redis_key, members=self._model_key_value)
+            yield redis.sadd(
+                cls.redis_key(model_obj),
+                members=cls.model_key_value(model_obj)
+            )
 
     @classmethod
     @inlineCallbacks
-    def get_members(cls, redis: ConnectionHandler, index_value):
-        redis_key = cls._to_redis_key(index_value)
+    def remove(
+        cls, redis: Union[BaseRedisProtocol, ConnectionHandler], model_obj: T
+    ):
+        yield redis.srem(
+            cls.redis_key(model_obj),
+            members=cls.model_key_value(model_obj)
+        )
+
+    @classmethod
+    @inlineCallbacks
+    def get_members(
+        cls, redis: ConnectionHandler, index_value: Any
+    ) -> List[Any]:
+        redis_key = cls.redis_key_from_value(index_value)
         result = yield redis.smembers(redis_key)
         return returnValue(result)
 
     @classmethod
     @inlineCallbacks
     def search_models(
-        cls, redis: ConnectionHandler, index_value, model_class: Type[BaseModel]
-    ):
-        setattr(cls, '__model__', model_class)
-        redis_key = cls._to_redis_key(index_value)
+        cls, redis: ConnectionHandler, index_value: Any
+    ) -> List[BaseModel]:
+        redis_key = cls.redis_key_from_value(index_value)
         result = yield redis.exists(redis_key)
         if not result:
             return []
@@ -156,10 +195,6 @@ class SetIndex(BaseSetIndex):
         model_instances = []
         result = yield redis.smembers(redis_key)
         for value in result:
-            model_instance = yield model_class.search(redis, value)
+            model_instance = yield cls.__model__.search(redis, value)
             model_instances.append(model_instance)
         return model_instances
-
-    @inlineCallbacks
-    def remove_from_index(self, redis: Union[BaseRedisProtocol, ConnectionHandler]):
-        yield redis.srem(self.redis_key, members=self._model_key_value)

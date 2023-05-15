@@ -16,37 +16,14 @@ from .base import (
 )
 
 
-class SingleIndexUsername(BaseIndexUsername, HashIndex):
-    pass
-
-
-class SingleIndexEmail(BaseIndexEmail, HashIndex):
-    pass
-
-
-class SetIndexGroupID(BaseIndexGroupID, SetIndex):
-    pass
-
-
-class ListIndexQueue(BaseIndexQueue, ListIndex):
-    pass
-
-
 @dataclass
 class UserModel(BaseUserModel, Model):
-    __indexes__ = [
-        SingleIndexUsername,
-        SingleIndexEmail,
-        SetIndexGroupID,
-        ListIndexQueue
-    ]
-
     @classmethod
     @defer.inlineCallbacks
     def search_by_queue(
         cls, redis: ConnectionHandler, queue_id: int
     ):
-        res = yield ListIndexQueue.search_models(redis, queue_id, cls)
+        res = yield ListIndexQueue.search_models(redis, queue_id)
         return res
 
     @classmethod
@@ -55,8 +32,32 @@ class UserModel(BaseUserModel, Model):
         cls, redis: ConnectionHandler, queue_id: int
     ):
         """Search for model and do `rpushlpop` on the index"""
-        res = yield ListIndexQueue.get_by_rpoplpush(redis, queue_id, cls)
+        res = yield ListIndexQueue.get_by_rpoplpush(redis, queue_id)
         return res
+
+
+class SingleIndexUsername(BaseIndexUsername, HashIndex):
+    __model__ = UserModel
+
+
+class SingleIndexEmail(BaseIndexEmail, HashIndex):
+    __model__ = UserModel
+
+
+class SetIndexGroupID(BaseIndexGroupID, SetIndex):
+    __model__ = UserModel
+
+
+class ListIndexQueue(BaseIndexQueue, ListIndex):
+    __model__ = UserModel
+
+
+UserModel.__indexes__ = [
+    SingleIndexUsername,
+    SingleIndexEmail,
+    SetIndexGroupID,
+    ListIndexQueue
+]
 
 
 class ExtendedUserModel(UserModel):

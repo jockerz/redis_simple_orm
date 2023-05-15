@@ -1,12 +1,12 @@
 from datetime import date, datetime
 from dataclasses import asdict, fields
-from typing import Any, List, Type, TypeVar
+from enum import Enum
+from typing import Any, ClassVar, List, TypeVar
 from uuid import UUID
 
 T = TypeVar('T')
 
-
-REDIS_MODEL_PREFIX = 'simple_redis_orm'
+REDIS_MODEL_PREFIX = None
 
 
 class BaseIndex:
@@ -14,25 +14,27 @@ class BaseIndex:
     __prefix__: str
     __index_name__: str = 'index'
     # Model class that using this index
-    __model__: T
+    __model__: ClassVar
     __key__: str
 
-    @property
-    def _model_key_value(self):
-        value = getattr(self.__model__, self.__model__.__key__)
+    @classmethod
+    def model_key_value(cls, model_obj: T) -> Any:
+        value = getattr(model_obj, model_obj.__key__)
         if isinstance(value, UUID):
             value = str(value)
         return value
 
     @classmethod
-    def create_from_model_class(cls, model_instance: Type["BaseModel"]):
-        cls.__model__ = model_instance
-        return cls()
+    def index_key_value(cls, model_obj: T) -> Any:
+        value = getattr(model_obj, cls.__key__)
+        if isinstance(value, UUID):
+            value = str(value)
+        return value
 
 
 class BaseHashIndex(BaseIndex):
     @classmethod
-    def _to_redis_key(cls) -> str:
+    def redis_key(cls) -> str:
         model_prefix = cls.__model__.__model_name__
         if cls.__prefix__ is not None:
             redis_key = f'{cls.__prefix__}::'
@@ -42,14 +44,10 @@ class BaseHashIndex(BaseIndex):
                     f'{cls.__index_name__}::{cls.__key__}'
         return redis_key
 
-    @property
-    def redis_key(self) -> str:
-        return self._to_redis_key()
-
 
 class BaseListIndex(BaseIndex):
     @classmethod
-    def _to_redis_key(cls, value) -> str:
+    def redis_key_from_value(cls, value: Any) -> str:
         model_prefix = cls.__model__.__model_name__
         if cls.__prefix__ is not None:
             redis_key = f'{cls.__prefix__}::'
@@ -59,16 +57,15 @@ class BaseListIndex(BaseIndex):
                     f'{cls.__index_name__}::{cls.__key__}:{value}'
         return redis_key
 
-    @property
-    def redis_key(self) -> str:
-        value = getattr(self.__model__, self.__key__)
-        return self._to_redis_key(value)
+    @classmethod
+    def redis_key(cls, instance: T) -> str:
+        value = getattr(instance, cls.__key__)
+        return cls.redis_key_from_value(value)
 
 
 class BaseSetIndex(BaseIndex):
-
     @classmethod
-    def _to_redis_key(cls, value: Any) -> str:
+    def redis_key_from_value(cls, value: Any) -> str:
         model_prefix = cls.__model__.__model_name__
         if cls.__prefix__ is not None:
             redis_key = f'{cls.__prefix__}::'
@@ -78,10 +75,10 @@ class BaseSetIndex(BaseIndex):
                     f'{cls.__index_name__}::{cls.__key__}:{value}'
         return redis_key
 
-    @property
-    def redis_key(self) -> str:
-        value = getattr(self.__model__, self.__key__)
-        return self._to_redis_key(value)
+    @classmethod
+    def redis_key(cls, instance: T) -> str:
+        value = getattr(instance, cls.__key__)
+        return cls.redis_key_from_value(value)
 
 
 
@@ -120,7 +117,7 @@ class BaseModel:
             setattr(self, field, value)
 
     @classmethod
-    def _to_redis_key(cls, value):
+    def redis_key_from_value(cls, value):
         if isinstance(value, UUID):
             value = str(value)
         if cls.__prefix__ is None:
@@ -129,16 +126,22 @@ class BaseModel:
 
     @property
     def redis_key(self):
-        return self._to_redis_key(getattr(self, self.__key__))
+        return self.redis_key_from_value(getattr(self, self.__key__))
 
     def dict(self) -> dict:
         return asdict(self)
 
-    def to_redis(self) -> dict:
+    def to_redis(self):
         dict_data = self.dict()
-        for key, value in dict_data.copy().items():
+        for key, value in self.dict().items():
             if value is None:
                 del dict_data[key]
+            elif isinstance(value, bool):
+                dict_data[key] = int(value)
+            elif isinstance(value, (date, datetime)):
+                dict_data[key] = value.isoformat()
+            elif isinstance(value, Enum):
+                dict_data[key] = value.value
         return dict_data
 
     @classmethod
@@ -147,4 +150,8 @@ class BaseModel:
 
     @classmethod
     def search(cls, redis, value):
+        raise NotImplementedError
+
+    @classmethod
+    def all(cls, redis):
         raise NotImplementedError

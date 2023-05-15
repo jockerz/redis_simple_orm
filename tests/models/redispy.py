@@ -13,60 +13,65 @@ from .base import (
 )
 
 
+@dataclass
+class UserModel(Model, BaseUserModel):
+    @classmethod
+    def search_by_queue(cls, redis: Redis, queue_id: int):
+        return ListIndexQueue.search_models(redis, queue_id)
+
+
 class SingleIndexUsername(BaseIndexUsername, HashIndex):
-    pass
+    __model__ = UserModel
 
 
 class SingleIndexEmail(BaseIndexEmail, HashIndex):
-    pass
+    __model__ = UserModel
 
 
 class SetIndexGroupID(BaseIndexGroupID, SetIndex):
-    pass
+    __model__ = UserModel
 
 
 class ListIndexQueue(BaseIndexQueue, ListIndex):
-    pass
+    __model__ = UserModel
 
 
-@dataclass
-class UserModel(Model, BaseUserModel):
-    __indexes__ = [
-        SingleIndexUsername,
-        SingleIndexEmail,
-        SetIndexGroupID,
-        ListIndexQueue
-    ]
-
-    def to_redis(self):
-        dict_data = super(UserModel, self).to_redis()
-        if self.birth_date is not None:
-            dict_data['birth_date'] = self.birth_date.isoformat()
-        if self.email is None:
-            del dict_data['email']
-        return dict_data
-
-    @classmethod
-    def search_by_queue(cls, redis: Redis, queue_id: int):
-        return ListIndexQueue.search_models(redis, queue_id, cls)
-
-
-class NoPrefixSingleIndexUsername(BaseIndexUsername, HashIndex):
-    __prefix__ = None
-
-
-class NoPrefixSingleIndexEmail(BaseIndexEmail, HashIndex):
-    __prefix__ = None
-
-
-class NoPrefixSetIndexGroupID(BaseIndexGroupID, SetIndex):
-    __prefix__ = None
-
-
-class NoPrefixListIndexQueue(BaseIndexQueue, ListIndex):
-    __prefix__ = None
+UserModel.__indexes__ = [
+    SingleIndexUsername,
+    SingleIndexEmail,
+    SetIndexGroupID,
+    ListIndexQueue
+]
 
 
 @dataclass
 class NoPrefixUserModel(Model, BaseUserModel):
     __prefix__ = None
+
+
+class NoPrefixSingleIndexUsername(BaseIndexUsername, HashIndex):
+    __prefix__ = None
+    __model__ = NoPrefixUserModel
+
+
+class NoPrefixSingleIndexEmail(BaseIndexEmail, HashIndex):
+    __prefix__ = None
+    __model__ = NoPrefixUserModel
+
+
+class NoPrefixSetIndexGroupID(BaseIndexGroupID, SetIndex):
+    __prefix__ = None
+    __model__ = NoPrefixUserModel
+
+
+class NoPrefixListIndexQueue(BaseIndexQueue, ListIndex):
+    __prefix__ = None
+    __model__ = NoPrefixUserModel
+
+
+NoPrefixUserModel.__indexes__ = [
+    NoPrefixSingleIndexUsername,
+    NoPrefixSingleIndexEmail,
+    NoPrefixSetIndexGroupID,
+    NoPrefixListIndexQueue
+]

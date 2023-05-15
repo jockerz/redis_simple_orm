@@ -13,48 +13,36 @@ from .models.redispy import (
     NoPrefixListIndexQueue,
 )
 
-
 BIRTH_DATE = date.fromisoformat('1999-09-09')
 
 
 class TestHashIndex:
     def test_redis_key(self):
         # With prefix
-        user = UserModel(
-            user_id=1, username='username', email='test@email'
-        )
-        index = SingleIndexUsername.create_from_model_class(user)
-        assert index.redis_key.startswith(REDIS_MODEL_PREFIX)
+        assert SingleIndexUsername.redis_key().startswith(REDIS_MODEL_PREFIX), \
+            f'redis_key: {SingleIndexUsername.redis_key()}'
 
         # Without prefix
-        user = NoPrefixUserModel(
-            user_id=1, username='username', email='test@email'
-        )
-        index = NoPrefixSingleIndexUsername.create_from_model_class(user)
-        assert not index.redis_key.startswith(REDIS_MODEL_PREFIX)
+        assert not NoPrefixSingleIndexUsername.redis_key().startswith(
+            REDIS_MODEL_PREFIX
+        ), f'redis_key: {NoPrefixSingleIndexUsername.redis_key()}'
 
 
     def test_search_model(self, sync_redis):
-        user = UserModel(
-            user_id=1, username='username', email='test@email'
-        )
+        user = UserModel(user_id=1, username='username', email='test@email')
         user.save(sync_redis)
 
-        assert SingleIndexUsername.search_model(
-            sync_redis, user.username, UserModel
-        ) is not None
-        assert SingleIndexEmail.search_model(
-            sync_redis, user.email, UserModel
-        ) is not None
+        assert SingleIndexUsername.search_model(sync_redis, user.username) \
+               is not None
+        assert SingleIndexEmail.search_model(sync_redis, user.email) \
+               is not None
 
     def test_search_not_found(self, sync_redis):
-        assert SingleIndexUsername.search_model(
-            sync_redis, 'not_exist', UserModel
-        ) is None
+        assert SingleIndexUsername.search_model(sync_redis, 'not_exist') \
+               is None
 
-        assert SingleIndexEmail.search_model(
-            sync_redis, 'not_exist@email', UserModel
-        ) is None
+        assert SingleIndexEmail.search_model(sync_redis, 'not_exist@email') \
+               is None
 
     def test_after_delete(self, sync_redis):
         user = UserModel(
@@ -62,21 +50,17 @@ class TestHashIndex:
         )
         user.save(sync_redis)
 
-        assert SingleIndexUsername.search_model(
-            sync_redis, user.username, UserModel
-        ) is not None
-        assert SingleIndexEmail.search_model(
-            sync_redis, user.email, UserModel
-        ) is not None
+        assert SingleIndexUsername.search_model(sync_redis, user.username) \
+               is not None
+        assert SingleIndexEmail.search_model(sync_redis, user.email) \
+               is not None
 
         user.delete(sync_redis)
 
-        assert SingleIndexUsername.search_model(
-            sync_redis, user.username, UserModel
-        ) is None
-        assert SingleIndexEmail.search_model(
-            sync_redis, user.email, UserModel
-        ) is None
+        assert SingleIndexUsername.search_model(sync_redis, user.username) \
+               is None
+        assert SingleIndexEmail.search_model(sync_redis, user.email) \
+               is None
 
 
 class TestListIndex:
@@ -85,15 +69,15 @@ class TestListIndex:
         user = UserModel(
             user_id=1, username='username', email='test@email'
         )
-        index = ListIndexQueue.create_from_model_class(user)
-        assert index.redis_key.startswith(REDIS_MODEL_PREFIX)
+        assert ListIndexQueue.redis_key(user).startswith(REDIS_MODEL_PREFIX)
 
         # Without prefix
         user = NoPrefixUserModel(
             user_id=1, username='username', email='test@email'
         )
-        index = NoPrefixListIndexQueue.create_from_model_class(user)
-        assert not index.redis_key.startswith(REDIS_MODEL_PREFIX)
+        assert not NoPrefixListIndexQueue.redis_key(user).startswith(
+            REDIS_MODEL_PREFIX
+        )
 
 
     def test_success(self, sync_redis):
@@ -107,10 +91,11 @@ class TestListIndex:
         )
         user.save(sync_redis)
 
-        index = ListIndexQueue.create_from_model_class(user)
-
-        assert index.is_exist_on_list(sync_redis, user.user_id) is True
-        assert sync_redis.exists(index.redis_key)
+        assert ListIndexQueue.has_member_value(
+            sync_redis, user.queue_id, user.user_id
+        ) is True
+        assert ListIndexQueue.has_member(sync_redis, user) is True
+        assert sync_redis.exists(ListIndexQueue.redis_key(user))
         assert len(
             ListIndexQueue.get_members(sync_redis, user.queue_id)
         ) == 1
@@ -126,11 +111,12 @@ class TestListIndex:
         )
         user.save(sync_redis)
 
-        index = ListIndexQueue.create_from_model_class(user)
-        assert index.is_exist_on_list(sync_redis, user.user_id) is True
+        assert ListIndexQueue.has_member(sync_redis, user) is True
 
         user.save(sync_redis)
-        assert len(sync_redis.lrange(index.redis_key, 0, -1)) == 2
+        assert len(sync_redis.lrange(
+            ListIndexQueue.redis_key(user), 0, -1
+        )) == 2
 
     def test_not_using_list_index(self, sync_redis):
         user = UserModel(
@@ -141,10 +127,8 @@ class TestListIndex:
             birth_date=date.fromisoformat('1999-09-09')
         )
         user.save(sync_redis)
-        index = ListIndexQueue.create_from_model_class(user)
 
-        assert len(sync_redis.lrange(index.redis_key, 0, -1)) == 0
-        assert index.is_exist_on_list(sync_redis, user.user_id) is False
+        assert ListIndexQueue.has_member(sync_redis, user) is False
 
     def test_rpushlpop(self, sync_redis):
         for data in (
@@ -154,12 +138,10 @@ class TestListIndex:
             user = UserModel(**data)
             user.save(sync_redis)
 
-        index = ListIndexQueue.create_from_model_class(user)
+        redis_key = ListIndexQueue.redis_key_from_value(user.queue_id)
+        old_list_data = sync_redis.lrange(redis_key, 0, -1)
 
-        old_list_data = sync_redis.lrange(index.redis_key, 0, -1)
-
-        redis_key = index.redis_key
-        user = ListIndexQueue.get_by_rpoplpush(sync_redis, 3, UserModel)
+        user = ListIndexQueue.get_by_rpoplpush(sync_redis, 3)
         assert user is not None
 
         new_list_data = sync_redis.lrange(redis_key, 0, -1)
@@ -177,13 +159,13 @@ class TestListIndex:
             birth_date=date.fromisoformat('1999-09-09')
         )
         user.save(sync_redis)
-        index = ListIndexQueue.create_from_model_class(user)
         user.delete(sync_redis)
 
-        assert index.is_exist_on_list(sync_redis, user.user_id) is False
-        assert len(ListIndexQueue.search_models(
-            sync_redis, user.queue_id, UserModel
-        )) == 0
+        assert ListIndexQueue.has_member_value(
+            sync_redis, user.queue_id, user.user_id
+        ) is False
+        assert len(ListIndexQueue.search_models(sync_redis, user.queue_id)) \
+               == 0
 
 
 class TestSetIndex:
@@ -193,15 +175,15 @@ class TestSetIndex:
         user = UserModel(
             user_id=1, username='username', email='test@email'
         )
-        index = SetIndexGroupID.create_from_model_class(user)
-        assert index.redis_key.startswith(REDIS_MODEL_PREFIX)
+        assert SetIndexGroupID.redis_key(user).startswith(REDIS_MODEL_PREFIX)
 
         # Without prefix
         user = NoPrefixUserModel(
             user_id=1, username='username', email='test@email'
         )
-        index = NoPrefixSetIndexGroupID.create_from_model_class(user)
-        assert not index.redis_key.startswith(REDIS_MODEL_PREFIX)
+        assert not NoPrefixSetIndexGroupID.redis_key(user).startswith(
+            REDIS_MODEL_PREFIX
+        )
 
     def test_search_model(self, sync_redis):
         user = UserModel(
@@ -210,7 +192,7 @@ class TestSetIndex:
         )
         user.save(sync_redis)
 
-        result = SetIndexGroupID.search_models(sync_redis, 10, UserModel)
+        result = SetIndexGroupID.search_models(sync_redis, 10)
         assert len(result) == 1
 
     def test_after_delete(self, sync_redis):
@@ -221,11 +203,7 @@ class TestSetIndex:
         user.save(sync_redis)
         user.delete(sync_redis)
 
-        assert len(SetIndexGroupID.search_models(
-            sync_redis, 10, UserModel
-        )) == 0
+        assert len(SetIndexGroupID.search_models(sync_redis, 10,)) == 0
 
     def test_not_found(self, sync_redis):
-        assert len(SetIndexGroupID.search_models(
-            sync_redis, 10, UserModel
-        )) == 0
+        assert len(SetIndexGroupID.search_models(sync_redis, 10)) == 0

@@ -1,6 +1,16 @@
 # Changelog
 
 
+## 2.0.0 (**Breaking changes**)
+
+ - `RSO.aioredis` to be `RSO.asyncio`
+ - Add `all` method on index class
+ - Remove `aioredis` from README and extra_requires.
+   `aioredis` can still be used because its API is pretty similar with `redis.asyncio`
+ - Index `__model__` property should be set early at Model and its Index declaration
+ - remove `aioredis` v1 supports
+
+
 ## 1.2.7
 
  - Do not execute pipeline on `Model.save` if `redis` argument is instance of Pipeline

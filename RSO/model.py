@@ -1,4 +1,3 @@
-from dataclasses import asdict
 from typing import Union
 
 from redis.client import Pipeline, Redis
@@ -20,15 +19,14 @@ class Model(BaseModel):
         for index_class in self.__indexes__ or []:
             if getattr(self, index_class.__key__) is None:
                 continue
-            index = index_class.create_from_model_class(self)
-            index.save_index(pipe)
+            index_class.save(pipe, self)
 
         if not isinstance(redis, Pipeline):
             pipe.execute()
 
     @classmethod
     def search(cls, redis: Redis, value):
-        redis_key = cls._to_redis_key(value)
+        redis_key = cls.redis_key_from_value(value)
         if bool(redis.exists(redis_key)):
             fields = cls.get_fields()
             redis_data = redis.hmget(redis_key, fields)
@@ -44,10 +42,9 @@ class Model(BaseModel):
             pipe = redis.pipeline()
 
         for index_class in self.__indexes__:
-            index = index_class.create_from_model_class(self)
-            index.remove_from_index(pipe)
+            if getattr(self, index_class.__key__) is not None:
+                index_class.remove(pipe, self)
 
         pipe.delete(self.redis_key)
-        pipe.execute()
-
-        del self
+        if not isinstance(redis, Pipeline):
+            pipe.execute()
