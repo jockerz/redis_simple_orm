@@ -3,6 +3,7 @@ from datetime import date
 import pytest_twisted
 
 from RSO.txredisapi.index import HashIndex
+from ..data import USERS
 from ..models.txredisapi import (
     UserModel,
     ListIndexQueue,
@@ -62,6 +63,19 @@ class TestModelGet:
     def test_not_found(self, tx_redis):
         res = yield UserModel.search(tx_redis, 1)
         assert res is None
+
+    @pytest_twisted.inlineCallbacks
+    def test_get_all_success(self, tx_redis):
+        result = yield UserModel.all(tx_redis)
+        assert len(result) == 0
+
+        for data in USERS:
+            user = UserModel(**data)
+            yield user.save(tx_redis)
+
+        result = yield UserModel.all(tx_redis)
+        assert len(result) == len(USERS)
+        assert isinstance(result[0], UserModel)
 
 
 class TestModelDelete:

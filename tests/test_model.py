@@ -8,6 +8,7 @@ from .models.redispy import (
     SetIndexGroupID,
     NoPrefixUserModel
 )
+from .data import USERS
 
 
 class TestModelCreate:
@@ -83,6 +84,18 @@ class TestModelGet:
 
     def test_not_found(self, sync_redis):
         assert UserModel.search(sync_redis, 1) is None
+
+    def test_get_all_success(self, sync_redis):
+        users = UserModel.all(sync_redis)
+        assert len(users) == 0
+
+        for data in USERS:
+            user = UserModel(**data)
+            user.save(sync_redis)
+
+        users = UserModel.all(sync_redis)
+        assert len(users) == len(USERS)
+        assert isinstance(users[0], UserModel)
 
 
 class TestModelDelete:

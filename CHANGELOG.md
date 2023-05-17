@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.1
+
+ - remove `extended_save` method
+ - add `Model.all()` method on model to get all Model data
+
 
 ## 2.0.0 (**Breaking changes**)
 

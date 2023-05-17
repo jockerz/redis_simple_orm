@@ -4,7 +4,6 @@ import pytest
 
 from ..models.asyncio import (
     UserModel,
-    ExtendedUserModel,
     ListIndexQueue,
 )
 
@@ -110,29 +109,8 @@ class TestListIndex:
         )
         assert user_id_list.count(str(user.user_id)) == 2
 
-    # TODO
-    @pytest.mark.skip
-    async def test_using_extended_save_multiple_times(self, async_redis):
-        user = ExtendedUserModel(
-            user_id=1,
-            username='test_create_success',
-            email='test@create.success',
-            group_id=2,
-            queue_id=3,
-            birth_date=date.fromisoformat('1999-09-09')
-        )
-        await user.save(async_redis)
-        await user.save(async_redis)
-
-        user_id_list = await async_redis.lrange(
-            ListIndexQueue.redis_key(user), 0, -1
-        )
-        assert user_id_list.count(str(user.user_id)) == 1
-
-    # TODO
-    @pytest.mark.skip
     async def test_not_use_list_index(self, async_redis):
-        user = ExtendedUserModel(
+        user = UserModel(
             user_id=1,
             username='test_create_success',
         )
@@ -146,14 +124,12 @@ class TestListIndex:
         assert (await ListIndexQueue.has_member(async_redis, user)) \
                is False
 
-    # TODO
-    @pytest.mark.skip
     async def test_rpushlpop(self, async_redis):
         for data in (
             dict(user_id=1, username='uname1', queue_id=3,),
             dict(user_id=2, username='uname2', queue_id=3,),
         ):
-            user = ExtendedUserModel(**data)
+            user = UserModel(**data)
             await user.save(async_redis)
 
         old_list_data = await async_redis.lrange(
@@ -161,11 +137,11 @@ class TestListIndex:
         )
         assert len(old_list_data) == 2
 
-        user = await ExtendedUserModel.search_by_list_rpushlpop(
+        user = await UserModel.search_by_list_rpushlpop(
             async_redis, queue_id=3
         )
 
-        assert isinstance(user, ExtendedUserModel)
+        assert isinstance(user, UserModel)
         new_list_data = await async_redis.lrange(
             ListIndexQueue.redis_key(user), 0, -1
         )
@@ -174,32 +150,27 @@ class TestListIndex:
         assert new_list_data[0] == old_list_data[1]
         assert new_list_data[1] == old_list_data[0]
 
-    # TODO
-    @pytest.mark.skip
     async def test_model_delete(self, async_redis):
-        user = ExtendedUserModel(
+        user = UserModel(
             user_id=1, username='username', queue_id=3,
         )
         await user.save(async_redis)
         await user.save(async_redis)
 
-        index = ListIndexQueue.create_from_model_class(user)
-        assert await index.ListIndexQueue(async_redis, user) \
+        assert await ListIndexQueue.has_member(async_redis, user) \
                is True
 
         users = await ListIndexQueue.search_models(async_redis, index_value=3)
-        assert len(users) == 1
+        assert len(users) == 2
 
         # delete user
         await user.delete(async_redis)
 
         assert (await ListIndexQueue.has_member(async_redis, user)) \
-               is False
+               is True
 
-        users = await ListIndexQueue.search_models(
-            async_redis, index_value=3
-        )
-        assert len(users) == 0
+        users = await ListIndexQueue.search_models(async_redis, index_value=3)
+        assert len(users) == 1
 
 
 @pytest.mark.asyncio
@@ -245,12 +216,10 @@ class TestListIndex2:
         )
         assert user_id_list.count(str(user.user_id)) == 2
 
-    # TODO
-    @pytest.mark.skip
     async def test_using_extended_save_multiple_times(self, async_redis_2):
         async_redis = async_redis_2
 
-        user = ExtendedUserModel(
+        user = UserModel(
             user_id=1,
             username='test_create_success',
             email='test@create.success',
@@ -261,31 +230,29 @@ class TestListIndex2:
         await user.save(async_redis)
         await user.save(async_redis)
 
-        index = ListIndexQueue.create_from_model_class(user)
-        user_id_list = await async_redis.lrange(index.redis_key, 0, -1)
-        assert user_id_list.count(str(user.user_id)) == 1
+        user_id_list = await async_redis.lrange(
+            ListIndexQueue.redis_key(user), 0, -1
+        )
+        assert user_id_list.count(str(user.user_id)) == 2
 
-    # TODO
-    @pytest.mark.skip
     async def test_not_use_list_index(self, async_redis_2):
         async_redis = async_redis_2
 
-        user = ExtendedUserModel(
+        user = UserModel(
             user_id=1,
             username='test_create_success',
         )
         await user.save(async_redis)
 
-        index = ListIndexQueue.create_from_model_class(user)
-
-        user_id_list = await async_redis.lrange(index.redis_key, 0, -1)
+        user_id_list = await async_redis.lrange(
+            ListIndexQueue.redis_key(user), 0, -1
+        )
         assert user_id_list.count(str(user.user_id)) == 0
 
-        assert (await index.is_exist_on_list(async_redis, user.user_id)) \
-               is False
+        assert (await ListIndexQueue.has_member_value(
+            async_redis, user.queue_id, user.user_id
+        )) is False
 
-    # TODO
-    @pytest.mark.skip
     async def test_rpushlpop(self, async_redis_2):
         async_redis = async_redis_2
 
@@ -293,54 +260,52 @@ class TestListIndex2:
             dict(user_id=1, username='uname1', queue_id=3,),
             dict(user_id=2, username='uname2', queue_id=3,),
         ):
-            user = ExtendedUserModel(**data)
+            user = UserModel(**data)
             await user.save(async_redis)
 
-        index = ListIndexQueue.create_from_model_class(user)
-        old_list_data = await async_redis.lrange(index.redis_key, 0, -1)
+        old_list_data = await async_redis.lrange(
+            ListIndexQueue.redis_key(user), 0, -1
+        )
         assert len(old_list_data) == 2
 
-        user = await ExtendedUserModel.search_by_list_rpushlpop(
+        user = await UserModel.search_by_list_rpushlpop(
             async_redis, queue_id=3
         )
 
-        assert isinstance(user, ExtendedUserModel)
-        new_list_data = await async_redis.lrange(index.redis_key, 0, -1)
+        assert isinstance(user, UserModel)
+        new_list_data = await async_redis.lrange(
+            ListIndexQueue.redis_key(user), 0, -1
+        )
         assert len(new_list_data) == 2
 
         assert new_list_data[0] == old_list_data[1]
         assert new_list_data[1] == old_list_data[0]
 
-    # TODO
-    @pytest.mark.skip
     async def test_model_delete(self, async_redis_2):
         async_redis = async_redis_2
 
-        user = ExtendedUserModel(
+        user = UserModel(
             user_id=1, username='username', queue_id=3,
         )
         await user.save(async_redis)
         await user.save(async_redis)
 
-        index = ListIndexQueue.create_from_model_class(user)
-        assert (await index.is_exist_on_list(async_redis, user.user_id)) \
-               is True
+        assert (await ListIndexQueue.has_member_value(
+            async_redis, user.queue_id, user.user_id
+        )) is True
 
-        users = await ListIndexQueue.search_models(
-            async_redis, index_value=3, model_class=ExtendedUserModel
-        )
-        assert len(users) == 1
+        users = await ListIndexQueue.search_models(async_redis, index_value=3)
+        assert len(users) == 2
 
         # delete user
         await user.delete(async_redis)
 
-        assert (await index.is_exist_on_list(async_redis, user.user_id)) \
-               is False
+        assert (await ListIndexQueue.has_member_value(
+            async_redis, user.queue_id, user.user_id
+        )) is True
 
-        users = await ListIndexQueue.search_models(
-            async_redis, index_value=3, model_class=ExtendedUserModel
-        )
-        assert len(users) == 0
+        users = await ListIndexQueue.search_models(async_redis, index_value=3)
+        assert len(users) == 1
 
 
 @pytest.mark.asyncio

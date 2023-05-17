@@ -2,6 +2,7 @@ from datetime import date
 
 import pytest
 
+from ..data import USERS
 from ..models.asyncio import (
     UserModel,
     SingleIndexUsername,
@@ -75,6 +76,18 @@ class TestModelGet:
     async def test_not_found(self, async_redis):
         assert await UserModel.search(async_redis, 1) is None
 
+    async def test_get_all(self, async_redis):
+        users = await UserModel.all(async_redis)
+        assert len(users) == 0
+
+        for data in USERS:
+            user = UserModel(**data)
+            await user.save(async_redis)
+
+        users = await UserModel.all(async_redis)
+        assert len(users) == len(USERS)
+        assert isinstance(users[0], UserModel)
+
 
 @pytest.mark.asyncio
 class TestModelGet2:
@@ -94,8 +107,20 @@ class TestModelGet2:
         assert await UserModel.search(async_redis, user.user_id) \
                is not None
 
-    async def test_not_found(self, async_redis):
-        assert await UserModel.search(async_redis, 1) is None
+    async def test_not_found(self, async_redis_2):
+        assert await UserModel.search(async_redis_2, 1) is None
+
+    async def test_get_all(self, async_redis_2):
+        users = await UserModel.all(async_redis_2)
+        assert len(users) == 0
+
+        for data in USERS:
+            user = UserModel(**data)
+            await user.save(async_redis_2)
+
+        users = await UserModel.all(async_redis_2)
+        assert len(users) == len(USERS)
+        assert isinstance(users[0], UserModel)
 
 
 @pytest.mark.asyncio

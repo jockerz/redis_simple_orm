@@ -5,7 +5,6 @@ import pytest_twisted
 
 from ..models.txredisapi import (
     UserModel,
-    ExtendedUserModel,
     ListIndexQueue,
     SingleIndexUsername,
     SingleIndexEmail,
@@ -68,11 +67,9 @@ class TestListIndex:
         )
         assert user_id_list.count(user.user_id) == 2
 
-    # TODO
-    @pytest.mark.skip
     @pytest_twisted.inlineCallbacks
     def test_using_extended_model_save_multiple_times(self, tx_redis):
-        user = ExtendedUserModel(
+        user = UserModel(
             user_id=1,
             username='test_create_success',
             email='test@create.success',
@@ -86,13 +83,11 @@ class TestListIndex:
         user_id_list = yield tx_redis.lrange(
             ListIndexQueue.redis_key(user), 0, -1
         )
-        assert user_id_list.count(user.user_id) == 1
+        assert user_id_list.count(user.user_id) == 2
 
-    # TODO
-    @pytest.mark.skip
     @pytest_twisted.inlineCallbacks
     def test_not_using_list_index(self, tx_redis):
-        user = ExtendedUserModel(
+        user = UserModel(
             user_id=1,
             username='test_create_success',
             email='test@create.success',
@@ -109,36 +104,32 @@ class TestListIndex:
         res = yield ListIndexQueue.has_member(tx_redis, user)
         assert res is False
 
-    # TODO
-    @pytest.mark.skip
     @pytest_twisted.inlineCallbacks
     def test_rpushlpop(self, tx_redis):
         for data in (
             dict(user_id=1, username='uname1', queue_id=3,),
             dict(user_id=2, username='uname2', queue_id=3,),
         ):
-            user = ExtendedUserModel(**data)
+            user = UserModel(**data)
             yield user.save(tx_redis)
 
         redis_key = ListIndexQueue.redis_key(user)
         old_list_data = yield tx_redis.lrange(redis_key, 0, -1)
         assert len(old_list_data) == 2
 
-        user = yield ExtendedUserModel.search_by_list_rpushlpop(
+        user = yield UserModel.search_by_list_rpushlpop(
             tx_redis, queue_id=3
         )
-        assert isinstance(user, ExtendedUserModel)
+        assert isinstance(user, UserModel)
 
         new_list_data = yield tx_redis.lrange(redis_key, 0, -1)
         assert len(new_list_data) == 2
         assert new_list_data[0] == old_list_data[1]
         assert new_list_data[1] == old_list_data[0]
 
-    # TODO
-    @pytest.mark.skip
     @pytest_twisted.inlineCallbacks
     def test_after_delete(self, tx_redis):
-        user = ExtendedUserModel(
+        user = UserModel(
             user_id=1, username='username', queue_id=3,
         )
         yield user.save(tx_redis)
@@ -150,7 +141,7 @@ class TestListIndex:
         assert res is True
 
         users = yield ListIndexQueue.search_models(tx_redis, index_value=3)
-        assert len(users) == 1
+        assert len(users) == 2
 
         # remove here
         yield user.delete(tx_redis)
@@ -158,10 +149,10 @@ class TestListIndex:
         res = yield ListIndexQueue.has_member_value(
             tx_redis, user.queue_id, user.user_id
         )
-        assert res is False
+        assert res is True
 
         users = yield ListIndexQueue.search_models(tx_redis, index_value=3)
-        assert len(users) == 0
+        assert len(users) == 1
 
 
 class TestHashIndex:

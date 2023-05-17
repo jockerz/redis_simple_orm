@@ -1,4 +1,4 @@
-from typing import Union
+from typing import List, Optional, Union
 
 from redis.client import Pipeline, Redis
 
@@ -25,7 +25,7 @@ class Model(BaseModel):
             pipe.execute()
 
     @classmethod
-    def search(cls, redis: Redis, value):
+    def search(cls, redis: Redis, value) -> Optional['Model']:
         redis_key = cls.redis_key_from_value(value)
         if bool(redis.exists(redis_key)):
             fields = cls.get_fields()
@@ -34,6 +34,31 @@ class Model(BaseModel):
             return cls(**dict_data)
         else:
             return None
+
+    @classmethod
+    def all(cls, redis: Redis) -> List['Model']:
+        redis_key = cls.redis_key_from_value('*')
+        members = redis.keys(redis_key)
+        indexes = []
+        for index_class in cls.__indexes__:
+            indexes.append(
+                f'::{index_class.__index_name__}::{index_class.__key__}'
+            )
+        with redis.pipeline(transaction=True) as pipe:
+            for member in members:
+                is_index = False
+                for index in indexes:
+                    if index in member:
+                        is_index = True
+                        break
+                if not is_index:
+                    pipe.hgetall(member)
+            result_data = pipe.execute()
+
+        result = []
+        for data in result_data:
+            result.append(cls(**data))
+        return result
 
     def delete(self, redis: Union[Pipeline, Redis]):
         if isinstance(redis, Pipeline):

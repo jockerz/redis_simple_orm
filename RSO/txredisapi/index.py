@@ -153,13 +153,13 @@ class SetIndex(BaseSetIndex):
     ):
         if isinstance(redis, BaseRedisProtocol):
             redis.sadd(
-                cls.redis_key(model_obj),
-                cls.model_key_value(model_obj)
+                key=cls.redis_key(model_obj),
+                members=cls.model_key_value(model_obj)
             )
             returnValue(None)
         else:
             yield redis.sadd(
-                cls.redis_key(model_obj),
+                key=cls.redis_key(model_obj),
                 members=cls.model_key_value(model_obj)
             )
 
@@ -169,7 +169,7 @@ class SetIndex(BaseSetIndex):
         cls, redis: Union[BaseRedisProtocol, ConnectionHandler], model_obj: T
     ):
         yield redis.srem(
-            cls.redis_key(model_obj),
+            key=cls.redis_key(model_obj),
             members=cls.model_key_value(model_obj)
         )
 
