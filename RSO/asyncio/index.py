@@ -7,12 +7,10 @@ except (ImportError, ModuleNotFoundError):
     T_PIPE = Pipeline2
     T_REDIS = Redis2
     T_REDIS_PIPE = Union[Redis2, Pipeline2]
-    PIPE_CLS = (Pipeline2,)
 else:
-    T_PIPE = [Pipeline, Pipeline2]
+    T_PIPE = Union[Pipeline, Pipeline2]
     T_REDIS = Union[Redis, Redis2]
     T_REDIS_PIPE = Union[Redis, Redis2, Pipeline, Pipeline2]
-    PIPE_CLS = (Pipeline, Pipeline2)
 
 from RSO.base import BaseModel, BaseHashIndex, BaseListIndex, BaseSetIndex
 
