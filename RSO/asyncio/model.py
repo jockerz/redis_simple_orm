@@ -1,17 +1,26 @@
 from typing import List, Optional, Union
 
-from aioredis.client import Redis, Pipeline
 from redis.asyncio.client import Redis as Redis2, Pipeline as Pipeline2
+try:
+    from aioredis.client import Redis, Pipeline
+except ImportError:
+    T_REDIS = Union[Redis2]
+    T_REDIS_PIPE = Union[Redis2, Pipeline2]
+    PIPE_CLS = (Pipeline2,)
+else:
+    T_REDIS = Union[Redis, Redis2]
+    T_REDIS_PIPE = Union[Redis, Redis2, Pipeline, Pipeline2]
+    PIPE_CLS = (Pipeline, Pipeline2)
 
 from RSO.base import BaseModel
 
 
 class Model(BaseModel):
-    async def is_exists(self, redis: Union[Redis, Redis2]):
+    async def is_exists(self, redis: T_REDIS):
         return bool(await redis.exists(self.redis_key))
 
-    async def save(self, redis: Union[Pipeline, Pipeline2, Redis, Redis2]):
-        if isinstance(redis, (Pipeline, Pipeline2)):
+    async def save(self, redis: T_REDIS_PIPE):
+        if isinstance(redis, PIPE_CLS):
             pipe = redis
         else:
             pipe = redis.pipeline()
@@ -27,7 +36,7 @@ class Model(BaseModel):
             await pipe.execute()
 
     @classmethod
-    async def search(cls, redis: Redis, value) -> Optional['Model']:
+    async def search(cls, redis: T_REDIS, value) -> Optional['Model']:
         redis_key = cls.redis_key_from_value(value)
         if bool(await redis.exists(redis_key)) is True:
             fields = cls.get_fields()
@@ -38,7 +47,7 @@ class Model(BaseModel):
             return None
 
     @classmethod
-    async def all(cls, redis: [Redis, Redis2]) -> List['Model']:
+    async def all(cls, redis: T_REDIS) -> List['Model']:
         redis_key = cls.redis_key_from_value('*')
         members = await redis.keys(redis_key)
         indexes = []
@@ -63,8 +72,8 @@ class Model(BaseModel):
         return result
 
 
-    async def delete(self, redis: [Pipeline, Pipeline2, Redis, Redis2]) -> None:
-        if isinstance(redis, (Pipeline, Pipeline2)):
+    async def delete(self, redis: T_REDIS_PIPE) -> None:
+        if isinstance(redis, PIPE_CLS):
             pipe = redis
         else:
             pipe = redis.pipeline()
@@ -74,5 +83,5 @@ class Model(BaseModel):
                 await index_class.remove(pipe, self)
 
         pipe.delete(self.redis_key)
-        if not isinstance(redis, (Pipeline, Pipeline2)):
+        if not isinstance(redis, PIPE_CLS):
             await pipe.execute()

@@ -58,10 +58,3 @@ UserModel.__indexes__ = [
     SetIndexGroupID,
     ListIndexQueue
 ]
-
-
-class ExtendedUserModel(UserModel):
-
-    @defer.inlineCallbacks
-    def save(self, redis: Union[BaseRedisProtocol, ConnectionHandler]):
-        yield super(ExtendedUserModel, self).extended_save(redis)

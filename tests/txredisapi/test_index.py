@@ -1,6 +1,5 @@
 from datetime import date
 
-import pytest
 import pytest_twisted
 
 from ..models.txredisapi import (

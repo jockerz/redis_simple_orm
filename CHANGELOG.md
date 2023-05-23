@@ -1,9 +1,16 @@
 # Changelog
 
+
+## 2.1.0
+
+ - Add `pyopenssl` as `redis_simple_orm[txredisapi]` requirements.
+ - Handling `ImportError` exception when importing `aioredis`
+
+
 ## 2.0.1
 
- - remove `extended_save` method
- - add `Model.all()` method on model to get all Model data
+ - Remove `extended_save` method
+ - Add `Model.all()` method on model to get all Model data
 
 
 ## 2.0.0 (**Breaking changes**)
@@ -23,12 +30,12 @@
 
 ## 1.2.6
 
- - allow Model and Index property `__prefix__ = None` value
+ - Allow Model and Index property `__prefix__ = None` value
 
 
 ## 1.2.5
 
- - remove `delete self` on `Index` class
+ - Remove `delete self` on `Index` class
 
 
 ## 1.2.4

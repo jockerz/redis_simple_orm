@@ -1,3 +1,4 @@
 aioredis
+pyopenssl
 redis
 txredisapi

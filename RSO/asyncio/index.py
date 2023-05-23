@@ -1,7 +1,19 @@
 from typing import Any, Optional, TypeVar, Union
 
-from aioredis.client import Redis, Pipeline
 from redis.asyncio.client import Redis as Redis2, Pipeline as Pipeline2
+try:
+    from aioredis.client import Redis, Pipeline
+except ImportError:
+    T_PIPE = Pipeline2
+    T_REDIS = Redis2
+    T_REDIS_PIPE = Union[Redis2, Pipeline2]
+    PIPE_CLS = (Pipeline2,)
+else:
+    T_PIPE = [Pipeline, Pipeline2]
+    T_REDIS = Union[Redis, Redis2]
+    T_REDIS_PIPE = Union[Redis, Redis2, Pipeline, Pipeline2]
+    PIPE_CLS = (Pipeline, Pipeline2)
+
 from RSO.base import BaseModel, BaseHashIndex, BaseListIndex, BaseSetIndex
 
 T = TypeVar('T')
@@ -10,7 +22,7 @@ T = TypeVar('T')
 class HashIndex(BaseHashIndex):
     @classmethod
     async def save(
-        cls, redis: Union[Pipeline, Pipeline2], model_obj: T
+        cls, redis: T_PIPE, model_obj: T
     ) -> None:
         index_value = getattr(model_obj, cls.__key__)
         redis.hset(cls.redis_key(), mapping={
@@ -19,12 +31,12 @@ class HashIndex(BaseHashIndex):
 
     @classmethod
     async def remove(
-        cls, redis: Union[Pipeline, Pipeline2], model_obj: T
+        cls, redis: T_PIPE, model_obj: T
     ) -> None:
         redis.hdel(cls.redis_key(), cls.index_key_value(model_obj))
 
     @classmethod
-    async def search_model(cls, redis: Union[Redis, Redis2], index_value):
+    async def search_model(cls, redis: T_REDIS, index_value):
         redis_key = cls.redis_key()
         if not bool(await redis.exists(redis_key)):
             return
@@ -38,13 +50,13 @@ class HashIndex(BaseHashIndex):
 class ListIndex(BaseListIndex):
     @classmethod
     async def save(
-        cls, redis: Union[Pipeline, Pipeline2], model_obj: T
+        cls, redis: T_PIPE, model_obj: T
     ) -> None:
         redis.lpush(cls.redis_key(model_obj), cls.model_key_value(model_obj))
 
     @classmethod
     async def remove(
-        cls, redis: Union[Pipeline, Pipeline2], model_obj: T, count: int = 1
+        cls, redis: T_PIPE, model_obj: T, count: int = 1
     ):
         """count = 0 to remove all"""
         redis.lrem(
@@ -54,12 +66,12 @@ class ListIndex(BaseListIndex):
         )
 
     @classmethod
-    async def get_members(cls, redis: Redis, index_value):
+    async def get_members(cls, redis: T_REDIS, index_value):
         redis_key = cls.redis_key_from_value(index_value)
         return await redis.lrange(redis_key, 0, -1)
 
     @classmethod
-    async def search_models(cls, redis: Redis, index_value):
+    async def search_models(cls, redis: T_REDIS, index_value):
         redis_key = cls.redis_key_from_value(index_value)
         if not bool(await redis.exists(redis_key)):
             return []
@@ -71,7 +83,7 @@ class ListIndex(BaseListIndex):
         return model_instances
 
     @classmethod
-    async def has_member(cls, redis: [Redis, Redis2], model_obj: T) -> bool:
+    async def has_member(cls, redis: T_REDIS, model_obj: T) -> bool:
         return await cls.has_member_value(
             redis,
             getattr(model_obj, cls.__key__),
@@ -80,7 +92,7 @@ class ListIndex(BaseListIndex):
 
     @classmethod
     async def has_member_value(
-        cls, redis: [Redis, Redis2], index_value: Any, model_value: Any
+        cls, redis: T_REDIS, index_value: Any, model_value: Any
     ) -> bool:
         if hasattr(redis, 'lpos'):
             result = await redis.lpos(
@@ -97,7 +109,7 @@ class ListIndex(BaseListIndex):
 
     @classmethod
     async def get_by_rpoplpush(
-        cls, redis: [Redis, Redis2], index_value: Any,
+        cls, redis: T_REDIS, index_value: Any,
     ) -> Optional[BaseModel]:
         redis_key = cls.redis_key_from_value(index_value)
         if bool(await redis.exists(redis_key)) is False:
@@ -109,26 +121,26 @@ class ListIndex(BaseListIndex):
 
 class SetIndex(BaseSetIndex):
     @classmethod
-    async def save(cls, redis: [Pipeline, Pipeline2], model_obj: T) -> None:
+    async def save(cls, redis: T_PIPE, model_obj: T) -> None:
         redis.sadd(
             cls.redis_key(model_obj),
             cls.model_key_value(model_obj)
         )
 
     @classmethod
-    async def remove(cls, redis: [Pipeline, Pipeline2], model_obj: T) -> None:
+    async def remove(cls, redis: T_PIPE, model_obj: T) -> None:
         redis.srem(
             cls.redis_key(model_obj),
             cls.model_key_value(model_obj)
         )
 
     @classmethod
-    async def get_members(cls, redis: Redis, index_value):
+    async def get_members(cls, redis: T_REDIS, index_value):
         redis_key = cls.redis_key_from_value(index_value)
         return await redis.smembers(redis_key)
 
     @classmethod
-    async def search_models(cls, redis: Redis, index_value):
+    async def search_models(cls, redis: T_REDIS, index_value):
         redis_key = cls.redis_key_from_value(index_value)
         if not bool(await redis.exists(redis_key)):
             return []
