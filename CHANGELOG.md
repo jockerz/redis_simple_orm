@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.2
+
+ - Minor patch for typo
+
+
 ## 2.1.1
 
  - Handling `ModuleNotFoundError` exception when importing `aioredis`

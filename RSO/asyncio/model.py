@@ -32,7 +32,7 @@ class Model(BaseModel):
                 continue
             await index_class.save(pipe, self)
 
-        if not isinstance(redis, (Pipeline, Pipeline2)):
+        if not isinstance(redis, PIPE_CLS):
             await pipe.execute()
 
     @classmethod
