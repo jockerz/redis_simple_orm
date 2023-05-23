@@ -3,7 +3,7 @@ from typing import List, Optional, Union
 from redis.asyncio.client import Redis as Redis2, Pipeline as Pipeline2
 try:
     from aioredis.client import Redis, Pipeline
-except ImportError:
+except (ImportError, ModuleNotFoundError):
     T_REDIS = Union[Redis2]
     T_REDIS_PIPE = Union[Redis2, Pipeline2]
     PIPE_CLS = (Pipeline2,)

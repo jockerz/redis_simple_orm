@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.1
+
+ - Handling `ModuleNotFoundError` exception when importing `aioredis`
+
 
 ## 2.1.0
 
