@@ -1,7 +1,7 @@
 import typing as t
 from dataclasses import dataclass
 
-from aioredis.client import Redis, Pipeline
+from redis.asyncio.client import Redis, Pipeline
 from RSO.asyncio.index import HashIndex, ListIndex, SetIndex
 from RSO.asyncio.model import Model
 

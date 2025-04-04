@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.0 (**Breaking changes**)
+
+ - Support Python `3.8+`
+ - Remove `aioredis` usage
+
+
 ## 2.1.2
 
  - Minor patch for typo

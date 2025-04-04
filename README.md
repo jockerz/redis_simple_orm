@@ -179,7 +179,7 @@ main()
 ```
 
 
-## Usage Example (`asyncio` version, also works with `aioredis` `v.2.x`)
+## Usage Example (`asyncio` version)
 
 ### Model
 

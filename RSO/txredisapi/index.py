@@ -1,7 +1,7 @@
 from typing import Any, List, Optional, Union, TypeVar
 
 from txredisapi import BaseRedisProtocol, ConnectionHandler
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 
 from RSO.base import BaseModel, BaseHashIndex, BaseListIndex, BaseSetIndex
 
@@ -20,7 +20,6 @@ class HashIndex(BaseHashIndex):
                 cls.redis_key(),
                 {index_value: cls.model_key_value(model_obj)}
             )
-            returnValue(None)
         else:
             yield redis.hmset(
                 cls.redis_key(),
@@ -48,7 +47,7 @@ class HashIndex(BaseHashIndex):
         if model_primary_value is None:
             return
         result = yield cls.__model__.search(redis, model_primary_value)
-        returnValue(result)
+        return result
 
 
 class ListIndex(BaseListIndex):
@@ -62,7 +61,6 @@ class ListIndex(BaseListIndex):
                 cls.redis_key(model_obj),
                 cls.model_key_value(model_obj)
             )
-            returnValue(None)
         else:
             yield redis.lpush(
                 cls.redis_key(model_obj),
@@ -138,11 +136,11 @@ class ListIndex(BaseListIndex):
         redis_key = cls.redis_key_from_value(index_value)
         result = yield redis.exists(redis_key)
         if not result:
-            returnValue(None)
+            return None
         else:
             value = yield redis.rpoplpush(redis_key, redis_key)
             result = yield cls.__model__.search(redis, value)
-            returnValue(result)
+            return result
 
 
 class SetIndex(BaseSetIndex):
@@ -156,7 +154,6 @@ class SetIndex(BaseSetIndex):
                 key=cls.redis_key(model_obj),
                 members=cls.model_key_value(model_obj)
             )
-            returnValue(None)
         else:
             yield redis.sadd(
                 key=cls.redis_key(model_obj),
@@ -180,7 +177,7 @@ class SetIndex(BaseSetIndex):
     ) -> List[Any]:
         redis_key = cls.redis_key_from_value(index_value)
         result = yield redis.smembers(redis_key)
-        return returnValue(result)
+        return result
 
     @classmethod
     @inlineCallbacks

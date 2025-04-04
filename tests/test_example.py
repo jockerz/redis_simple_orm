@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
 import pytest
-from fakeredis import FakeRedis as Redis, aioredis
+from fakeredis import FakeRedis as Redis, FakeAsyncRedis as AsyncRedis
 
 from RSO.index import HashIndex, SetIndex
 from RSO.model import Model
@@ -107,15 +107,15 @@ class AsyncUserModel(AsyncModel, BaseUserModel):
     """For easier access, we create some searching method"""
 
     @classmethod
-    async def search_by_username(cls, redis: Redis, username: str):
+    async def search_by_username(cls, redis: AsyncRedis, username: str):
         return await AsyncSingleIndexUsername.search_model(redis, username)
 
     @classmethod
-    async def search_by_email(cls, redis: Redis, email: str):
+    async def search_by_email(cls, redis: AsyncRedis, email: str):
         return await AsyncSingleIndexEmail.search_model(redis, email)
 
     @classmethod
-    async def search_group_member(cls, redis: Redis, group_id: int):
+    async def search_group_member(cls, redis: AsyncRedis, group_id: int):
         return await AsyncSetIndexGroupID.search_models(redis, group_id)
 
 
@@ -146,36 +146,38 @@ AsyncUserModel.__indexes__ = [
 
 @pytest.mark.asyncio
 async def test_async_main(async_redis):
-    redis = async_redis
-
     # save all user
     for user_data in USERS:
         user = AsyncUserModel(**user_data)
         print(f'{user.redis_key}: {user.to_redis()}')
-        await user.save(redis)
+        await user.save(async_redis)
 
     """Now see how is the model and index data saved on redis :)"""
 
     # search by id
-    user = await AsyncUserModel.search(redis, 1)
+    user = await AsyncUserModel.search(async_redis, 1)
     assert user is not None
 
     # search by username
-    user = await AsyncUserModel.search_by_username(redis, 'first_user')
+    user = await AsyncUserModel.search_by_username(async_redis, 'first_user')
     assert user is not None
-    user = await AsyncUserModel.search_by_username(redis, 'not_exist')
+    user = await AsyncUserModel.search_by_username(async_redis, 'not_exist')
     assert user is None
 
     # search by email
-    user = await AsyncUserModel.search_by_email(redis, 'first_user@contoh.com')
+    user = await AsyncUserModel.search_by_email(
+        async_redis, 'first_user@contoh.com'
+    )
     assert user is not None
-    user = await AsyncUserModel.search_by_email(redis, 'not_exist@contoh.com')
+    user = await AsyncUserModel.search_by_email(
+        async_redis, 'not_exist@contoh.com'
+    )
     assert user is None
 
     # search by group id
-    users = await AsyncUserModel.search_group_member(redis, 1)
+    users = await AsyncUserModel.search_group_member(async_redis, 1)
     assert len(users) == 3
-    users = await AsyncUserModel.search_group_member(redis, 2)
+    users = await AsyncUserModel.search_group_member(async_redis, 2)
     assert len(users) == 2
-    users = await AsyncUserModel.search_group_member(redis, 1_000_000)
+    users = await AsyncUserModel.search_group_member(async_redis, 1_000_000)
     assert len(users) == 0

@@ -1,20 +1,14 @@
 from typing import Any, Optional, TypeVar, Union
 
-from redis.asyncio.client import Redis as Redis2, Pipeline as Pipeline2
-try:
-    from aioredis.client import Redis, Pipeline
-except (ImportError, ModuleNotFoundError):
-    T_PIPE = Pipeline2
-    T_REDIS = Redis2
-    T_REDIS_PIPE = Union[Redis2, Pipeline2]
-else:
-    T_PIPE = Union[Pipeline, Pipeline2]
-    T_REDIS = Union[Redis, Redis2]
-    T_REDIS_PIPE = Union[Redis, Redis2, Pipeline, Pipeline2]
+from redis.asyncio.client import Redis, Pipeline
 
 from RSO.base import BaseModel, BaseHashIndex, BaseListIndex, BaseSetIndex
 
+
 T = TypeVar('T')
+T_PIPE = Pipeline
+T_REDIS = Redis
+T_REDIS_PIPE = Union[Redis, Pipeline]
 
 
 class HashIndex(BaseHashIndex):

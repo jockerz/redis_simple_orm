@@ -37,7 +37,7 @@ def get_packages(package):
 setup(
     name="redis_simple_orm",
     version=get_version("RSO"),
-    python_requires='>=3.6',
+    python_requires='>=3.8',
     url="https://github.com/jockerz/redis_simple_orm",
     license="MIT",
     description="Simple Redis ORM (Sync and Async).",
@@ -54,8 +54,8 @@ setup(
         'aiocontextvars;python_version<"3.7"',
     ],
     extras_require={
+        "all": ["redis", "pyopenssl", "txredisapi"],
         "redis-py": ["redis"],
-        "aioredis": ["aioredis"],
         "txredisapi": ["pyopenssl", "txredisapi"],
     },
     classifiers=[
@@ -65,7 +65,6 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
